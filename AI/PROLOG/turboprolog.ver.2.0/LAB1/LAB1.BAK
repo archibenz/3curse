@@ -1,0 +1,154 @@
+DOMAINS
+    person = symbol
+
+PREDICATES
+    % base facts
+    male(person).
+    female(person).
+    father(person, person).
+    mother(person, person).
+    married(person, person).
+
+    % derived relations
+    spouse(person, person).
+    parent(person, person).
+    child(person, person).
+    sibling(person, person).
+    brother(person, person).
+    sister(person, person).
+    grandparent(person, person).
+    grandfather(person, person).
+    grandmother(person, person).
+    uncle(person, person).
+    aunt(person, person).
+    cousin(person, person).
+    nephew(person, person).
+    niece(person, person).
+    husband(person, person).
+    wife(person, person).
+
+    % I/O from STDIO
+    write : (symbol) procedure.
+    write : (string) procedure.
+    nl.
+
+    % tree printers
+    show_descendants : (person) procedure.
+    show_children    : (person, integer) procedure.
+    show_ancestors  : (person) procedure.
+    show_parents    : (person, integer) procedure.
+    print_indent    : (integer) procedure.
+
+CLAUSES
+    % base facts: sex
+    male(ivan).
+    male(peter).
+    male(alexey).
+    male(sergey).
+    male(nikita).
+    male(victor).
+
+    female(maria).
+    female(olga).
+    female(elena).
+    female(anna).
+    female(dasha).
+    female(nina).
+
+    % base facts: marriages
+    married(ivan, maria).
+    married(peter, olga).
+    married(alexey, elena).
+    married(sergey, anna).
+
+    % base facts: father facts (grouped)
+    father(ivan,  alexey).
+    father(ivan,  anna).
+    father(peter, elena).
+    father(alexey, nikita).
+    father(alexey, dasha).
+    father(victor, sergey).
+
+    % base facts: mother facts (grouped)
+    mother(maria, alexey).
+    mother(maria, anna).
+    mother(olga,  elena).
+    mother(elena, nikita).
+    mother(elena, dasha).
+    mother(nina,  sergey).
+
+    % derived relations
+    spouse(X, Y) :- married(X, Y).
+    spouse(X, Y) :- married(Y, X).
+
+    parent(P, C) :- father(P, C).
+    parent(P, C) :- mother(P, C).
+
+    child(C, P) :- parent(P, C).
+
+    sibling(A, B) :-
+        parent(P, A),
+        parent(P, B),
+        A <> B.
+
+    brother(B, X) :- sibling(B, X), male(B).
+    sister(S, X)  :- sibling(S, X), female(S).
+
+    grandparent(G, C) :-
+        parent(G, P),
+        parent(P, C).
+
+    grandfather(GF, C) :- grandparent(GF, C), male(GF).
+    grandmother(GM, C) :- grandparent(GM, C), female(GM).
+
+    uncle(U, N) :- sibling(U, P), parent(P, N), male(U).
+    aunt(A, N)  :- sibling(A, P), parent(P, N), female(A).
+
+    cousin(C1, C2) :-
+        parent(P1, C1),
+        parent(P2, C2),
+        sibling(P1, P2),
+        C1 <> C2.
+
+    nephew(N, AU) :- parent(P, N), sibling(P, AU), male(N).
+    niece(N, AU)  :- parent(P, N), sibling(P, AU), female(N).
+
+    husband(H, W) :- spouse(H, W), male(H), female(W).
+    wife(W, H)    :- spouse(H, W), male(H), female(W).
+
+    % ----- tree printers -----
+    show_descendants(P) :-
+        write("Descendants of "), write(P), nl,
+        show_children(P, 0).
+
+    show_children(P, D) :-
+        parent(P, C),
+            print_indent(D), write("|- "), write(C), nl,
+            D1 := D + 1,
+            show_children(C, D1),
+            fail;
+        true.
+
+    show_ancestors(P) :-
+        write("Ancestors of "), write(P), nl,
+        show_parents(P, 0).
+
+    show_parents(P, D) :-
+        parent(A, P),
+            print_indent(D), write("|- "), write(A), nl,
+            D1 := D + 1,
+            show_parents(A, D1),
+            fail;
+        true.
+
+    print_indent(0).
+    print_indent(N) :-
+        N > 0,
+        write("  "),
+        N1 := N - 1,
+        print_indent(N1).
+
+GOAL
+    % выбери одно:
+    % show_descendants(ivan).
+    show_ancestors(nikita).

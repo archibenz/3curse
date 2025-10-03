@@ -4,8 +4,7 @@ public class lab1 {
     private static final Scanner SC = new Scanner(System.in);
 
     public static void main(String[] args) {
-        // ===== Часть 1. Обычные массивы =====
-        System.out.println("=== Часть 1: статические массивы ===");
+        System.out.println("статические массивы");
         int[] a = readArray(3, "A (3 элемента)");
         int[] b = readArray(5, "B (5 элементов)");
         int[] c = readArray(4, "C (4 элемента)");
@@ -33,12 +32,11 @@ public class lab1 {
         int[] merged = mergeArrays(a, b, c, d);
         printArray("Новый массив (A+B+C+D)", merged);
 
-        // ===== Часть 2. Динамические массивы (List) =====
-        System.out.println("\n=== Часть 2: динамические массивы (List) ===");
-        List<Integer> l1 = readList(3, "L1 (ArrayList, 3 элемента)", true);   // ArrayList
-        List<Integer> l2 = readList(5, "L2 (LinkedList, 5 элементов)", false); // LinkedList
-        List<Integer> l3 = readList(4, "L3 (ArrayList, 4 элемента)", true);   // ArrayList
-        List<Integer> l4 = readList(3, "L4 (LinkedList, 3 элемента)", false); // LinkedList
+        System.out.println("\nдинамические массивы");
+        List<Integer> l1 = readList(3, "L1 (ArrayList, 3 элемента)", true);   
+        List<Integer> l2 = readList(5, "L2 (LinkedList, 5 элементов)", false); 
+        List<Integer> l3 = readList(4, "L3 (ArrayList, 4 элемента)", true);  
+        List<Integer> l4 = readList(3, "L4 (LinkedList, 3 элемента)", false); 
 
         System.out.println("Исходные списки:");
         printList("L1", l1);
@@ -63,7 +61,6 @@ public class lab1 {
         printList("Новый список (L1+L2+L3+L4)", lMerged);
     }
 
-    // ===== Методы для массивов =====
     private static int[] readArray(int n, String label) {
         int[] arr = new int[n];
         System.out.printf("Введите %d целых числа для массива %s:%n", n, label);
@@ -96,7 +93,6 @@ public class lab1 {
         return res;
     }
 
-    // ===== Методы для списков =====
     private static List<Integer> readList(int n, String label, boolean arrayList) {
         final List<Integer> list = arrayList ? new ArrayList<>() : new LinkedList<>();
         System.out.printf("Введите %d целых числа для списка %s:%n", n, label);
@@ -128,7 +124,6 @@ public class lab1 {
         return res;
     }
 
-    // ===== Служебный метод ввода безопасного целого =====
     private static int readInt(String prompt) {
         while (true) {
             System.out.print(prompt);
@@ -136,7 +131,7 @@ public class lab1 {
                 return SC.nextInt();
             } else {
                 System.out.println("Ошибка ввода. Введите целое число.");
-                SC.next(); // пропустить неверный токен
+                SC.next();
             }
         }
     }

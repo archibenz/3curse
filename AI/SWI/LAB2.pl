@@ -128,6 +128,7 @@ validate_cube_verbose(Vs, Eps, EdgeLen, Edges) :-
         edge_pairs_by_e(Vs, E2, Eps, Edges),
         format("✓ Куб принят. Длина ребра ≈ ~g.~n", [EdgeLen])
     ;   format("✗ Эти точки не образуют куб.~n", []),
+        report_if_axis_aligned_box(Vs, Eps),
         format("  Ожидалось: 12 расстояний ≈ e^2, 12 ≈ 2e^2, 4 ≈ 3e^2, без прочих.~n", []),
         format("  Получено:   рёбра=~d, диагонали_грани=~d, диагонали_пространства=~d, прочие=~d.~n",
                [Cedge,Cface,Cspace,Cbad]),
@@ -192,6 +193,16 @@ edges_from_vertices_strict(Vs, Eps, EdgeLen, Edges) :-
         fail
     ).
 
+% Если это ось-выравнённый прямоугольный параллелепипед, сообщим его размеры
+report_if_axis_aligned_box(Vs, Eps) :-
+    ( cube_extents_axis_aligned(Vs, Eps, Xmin,Xmax,Ymin,Ymax,Zmin,Zmax) ->
+        Lx is Xmax - Xmin, Ly is Ymax - Ymin, Lz is Zmax - Zmin,
+        format("  Распознано: прямоугольный параллелепипед со сторонами ≈ (~g, ~g, ~g).~n", [Lx,Ly,Lz]),
+        ( approx(Lx,Ly, max(Eps,1.0e-9)), approx(Ly,Lz, max(Eps,1.0e-9)) ->
+            format("  (Стороны почти равны — возможно, это куб в пределах погрешности.)~n", [])
+        ; true )
+    ; true ).
+
 show_distance_diagnostics(Ds2, E2, Eps, Pairs) :-
     format("  Диагностика расстояний (показаны первые 10 «прочих»):~n", []),
     Tol is max(Eps, E2*1.0e-6),
@@ -214,6 +225,54 @@ take_first_n(L, N, R) :- length(R, N), append(R, _, L), !.
 take_first_n(L, _, L).
 
 % ===== Геометрия и пересечения =====
+
+% --- Робастные утилиты для пересечения отрезка с эллипсоидом ---
+ellipsoid_F(ellipsoid(Cx,Cy,Cz, Ax,Ay,Az), [X,Y,Z], F) :-
+    NX is (X-Cx)/Ax, NY is (Y-Cy)/Ay, NZ is (Z-Cz)/Az,
+    F is NX*NX + NY*NY + NZ*NZ - 1.0.
+
+point_on_segment([Ax0,Ay0,Az0],[Bx0,By0,Bz0], T, [Px,Py,Pz]) :-
+    Px is Ax0 + T*(Bx0-Ax0),
+    Py is Ay0 + T*(By0-Ay0),
+    Pz is Az0 + T*(Bz0-Az0).
+
+% Поиск корня методом бисекции на интервале [T0,T1]
+segment_root_bisect(Ell, A, B, T0, T1, EpsT, TRoot) :-
+    MaxIt = 60,
+    segment_root_bisect_(Ell,A,B,T0,T1,EpsT,MaxIt,TRoot).
+
+segment_root_bisect_(Ell,A,B,Lo,Hi,EpsT,_,TRoot) :-
+    Width is Hi-Lo,
+    ( Width =< EpsT -> TRoot is (Lo+Hi)/2, !
+    ; Mid is (Lo+Hi)/2,
+      point_on_segment(A,B,Lo,Plo), ellipsoid_F(Ell,Plo,Flo),
+      point_on_segment(A,B,Mid,Pmid), ellipsoid_F(Ell,Pmid,Fmid),
+      ( Flo =:= 0.0 -> TRoot = Lo, !
+      ; Fmid =:= 0.0 -> TRoot = Mid, !
+      ; Flo*Fmid =< 0 -> segment_root_bisect_(Ell,A,B,Lo,Mid,EpsT,_,TRoot)
+      ; segment_root_bisect_(Ell,A,B,Mid,Hi,EpsT,_,TRoot)
+      )
+    ).
+
+% Сканирование по t с шагом, сбор брекетов со сменой знака
+segment_intersections_scan(Ell, A, B, Eps, TsOut) :-
+    Steps = 400,
+    Step is 1.0/Steps,
+    EpsT is max(1.0e-9, 50*Eps),
+    findall([Tlo,Thi],
+        ( between(0, Steps-1, K),
+          T0 is K*Step, T1 is T0+Step,
+          point_on_segment(A,B,T0,P0), ellipsoid_F(Ell,P0,F0),
+          point_on_segment(A,B,T1,P1), ellipsoid_F(Ell,P1,F1),
+          ( F0*F1 =< 0 -> Tlo = T0, Thi = T1 ; fail )
+        ),
+        Brackets0),
+    findall(T,
+        ( member([Lo,Hi], Brackets0),
+          segment_root_bisect(Ell,A,B,Lo,Hi,EpsT,T)
+        ),
+        Ts0),
+    sort(Ts0, TsOut).
 
 intersect_ellipsoid_with_edges(Ell, Vs, Edges, EdgeLen, Eps, PointsOut) :-
     % Если Edges не связаны (на всякий случай), тихо пересчитаем их из вершин
@@ -249,25 +308,87 @@ on_ellipsoid(ellipsoid(Cx,Cy,Cz, Ax,Ay,Az), [X,Y,Z], Eps) :-
     Abs =< Tol.
 
 segment_ellipsoid_intersections(Ell, A, B, Eps, Points) :-
+    % 1) Быстрый и точный путь для ось-выравненных рёбер (две координаты постоянны)
+    ( seg_int_axis_aligned(Ell, A, B, Eps, Paxis) -> Points = Paxis
+    ; % 2) Безопасная оболочка общего метода: любые исключения -> пустой список
+      ( catch(seg_int_core(Ell,A,B,Eps,P0), _, P0 = []), !, Points = P0
+      ; Points = []
+      )
+    ).
+
+% Вспомогательный предикат: быстрый пересчёт пересечений для ось-выравненных рёбер
+seg_int_axis_aligned(ellipsoid(Cx,Cy,Cz, Ax,Ay,Az), A, B, Eps, Points) :-
+    A = [X1,Y1,Z1], B = [X2,Y2,Z2],
+    Tol is max(1.0e-9, 50*Eps),
+    ( abs(X1-X2) =< Tol, abs(Y1-Y2) =< Tol ->
+        % вертикальное ребро: меняется Z
+        Const is ((X1-Cx)/Ax)*((X1-Cx)/Ax) + ((Y1-Cy)/Ay)*((Y1-Cy)/Ay),
+        R0 is 1.0 - Const,
+        ( R0 < -Tol -> Points = []
+        ; R is max(0.0, R0), S is sqrt(R),
+          Zm is Cz - Az*S, Zp is Cz + Az*S,
+          z_in_segment(Z1,Z2,Zm,Tol,Ok1), z_in_segment(Z1,Z2,Zp,Tol,Ok2),
+          findall([X1,Y1,Z], ( (Ok1=:=1, Z=Zm); (Ok2=:=1, Z=Zp) ), P0),
+          dedup_points(P0, Tol, Points)
+        )
+    ; abs(X1-X2) =< Tol, abs(Z1-Z2) =< Tol ->
+        % ребро вдоль Y
+        Const is ((X1-Cx)/Ax)*((X1-Cx)/Ax) + ((Z1-Cz)/Az)*((Z1-Cz)/Az),
+        R0 is 1.0 - Const,
+        ( R0 < -Tol -> Points = []
+        ; R is max(0.0, R0), S is sqrt(R),
+          Ym is Cy - Ay*S, Yp is Cy + Ay*S,
+          y_in_segment(Y1,Y2,Ym,Tol,Ok1), y_in_segment(Y1,Y2,Yp,Tol,Ok2),
+          findall([X1,Y,Z1], ( (Ok1=:=1, Y=Ym); (Ok2=:=1, Y=Yp) ), P0),
+          dedup_points(P0, Tol, Points)
+        )
+    ; abs(Y1-Y2) =< Tol, abs(Z1-Z2) =< Tol ->
+        % ребро вдоль X
+        Const is ((Y1-Cy)/Ay)*((Y1-Cy)/Ay) + ((Z1-Cz)/Az)*((Z1-Cz)/Az),
+        R0 is 1.0 - Const,
+        ( R0 < -Tol -> Points = []
+        ; R is max(0.0, R0), S is sqrt(R),
+          Xm is Cx - Ax*S, Xp is Cx + Ax*S,
+          x_in_segment(X1,X2,Xm,Tol,Ok1), x_in_segment(X1,X2,Xp,Tol,Ok2),
+          findall([X,Y1,Z1], ( (Ok1=:=1, X=Xm); (Ok2=:=1, X=Xp) ), P0),
+          dedup_points(P0, Tol, Points)
+        )
+    ; fail % не ось-выравненное ребро — пусть обработает общий метод
+    ).
+
+x_in_segment(A,B,X,Tol,Ok) :-
+    Min is min(A,B)-Tol, Max is max(A,B)+Tol,
+    ( X >= Min, X =< Max -> Ok = 1 ; Ok = 0 ).
+
+y_in_segment(A,B,Y,Tol,Ok) :-
+    Min is min(A,B)-Tol, Max is max(A,B)+Tol,
+    ( Y >= Min, Y =< Max -> Ok = 1 ; Ok = 0 ).
+
+z_in_segment(A,B,Z,Tol,Ok) :-
+    Min is min(A,B)-Tol, Max is max(A,B)+Tol,
+    ( Z >= Min, Z =< Max -> Ok = 1 ; Ok = 0 ).
+
+seg_int_core(Ell, A, B, Eps, Points) :-
+    % Сначала — аналитика по квадратному уравнению
     Ell = ellipsoid(Cx,Cy,Cz, Ax,Ay,Az),
     A = [Ax0,Ay0,Az0], B = [Bx0,By0,Bz0],
     Dx is Bx0 - Ax0,  Dy is By0 - Ay0,  Dz is Bz0 - Az0,
     X0 is (Ax0 - Cx)/Ax,  Y0 is (Ay0 - Cy)/Ay,  Z0 is (Az0 - Cz)/Az,
     dX is Dx/Ax, dY is Dy/Ay, dZ is Dz/Az,
-    A2 is dX*dX + dY*dY + dZ*dZ,
-    B2 is 2.0*(X0*dX + Y0*dY + Z0*dZ),
-    C2 is X0*X0 + Y0*Y0 + Z0*Z0 - 1.0,
-    solve_quadratic(A2,B2,C2,Eps, Ts),
-    include(in_01(Eps), Ts, TsClamped),
-    findall([Px,Py,Pz],
-        ( member(T, TsClamped),
-          Px is Ax0 + T*Dx, Py is Ay0 + T*Dy, Pz is Az0 + T*Dz
-        ),
-        Points0
-    ),
-    include(on_ellipsoid_wrap(Ell,Eps), Points0, Points).
-
-on_ellipsoid_wrap(Ell,Eps, Pt) :- on_ellipsoid(Ell, Pt, Eps).
+    QA is dX*dX + dY*dY + dZ*dZ,
+    QB is 2.0*(X0*dX + Y0*dY + Z0*dZ),
+    QC is X0*X0 + Y0*Y0 + Z0*Z0 - 1.0,
+    solve_quadratic(QA,QB,QC,Eps, TsA),
+    include(in_01(Eps), TsA, TsA01),
+    findall(PtA, ( member(Ta, TsA01), point_on_segment(A,B,Ta,PtA) ), PtsA0),
+    ( PtsA0 \= [] ->
+        Points = PtsA0
+    ;   % Фоллбэк — робастный скан + бисекция
+        segment_intersections_scan(Ell, A, B, Eps, TsB),
+        include(in_01(Eps), TsB, TsB01),
+        findall(PtB, ( member(Tb, TsB01), point_on_segment(A,B,Tb,PtB) ), PtsB0),
+        Points = PtsB0
+    ).
 
 solve_quadratic(A,B,C,Eps, Ts) :-
     ( abs(A) =< Eps ->
@@ -407,4 +528,26 @@ run_data([Cx,Cy,Cz],[Ax,Ay,Az], Cube) :-
     intersect_ellipsoid_with_edges(Ell, Cube, Edges, EdgeLen, Eps, Raw),
     dedup_points(Raw, max(Eps, EdgeLen*1.0e-9), P),
     nl, format("Результат:~n", []),
+    print_points(P).
+% ===== Диагностика: печать пересечений по всем рёбрам на кейсе =====
+
+diag_case_ok :-
+    Eps = 1.0e-6,
+    Ell = ellipsoid(0,0,0, 1.5,1.5,0.5),
+    Cube = [[-1,-1,-1],[1,-1,-1],[-1,1,-1],[1,1,-1],[-1,-1,1],[1,-1,1],[-1,1,1],[1,1,1]],
+    validate_cube_verbose(Cube, Eps, EdgeLen, Edges),
+    format("Edges: ~g~n", [EdgeLen]),
+    length(Edges, NEdges), format("Всего рёбер: ~d~n", [NEdges]),
+    forall(
+        member([A,B], Edges),
+        ( segment_ellipsoid_intersections(Ell, A, B, Eps, Ps),
+          length(Ps, K),
+          format("Ребро ~w -> ~w: ~d точек~n", [A,B, K]),
+          forall(member(P, Ps), format("  ~w~n", [P]))
+        )
+    ),
+    intersect_ellipsoid_with_edges(Ell, Cube, Edges, EdgeLen, Eps, Raw),
+    dedup_points(Raw, max(Eps, EdgeLen*1.0e-9), P),
+    length(P, NP),
+    format("Итого после дедупликации: ~d точек~n", [NP]),
     print_points(P).

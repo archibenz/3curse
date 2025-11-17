@@ -17,7 +17,7 @@ public class Main {
             System.out.println("3) Изменить свойства устройства");
             System.out.println("4) Функциональная работа с устройством");
             System.out.println("5) Показать все устройства");
-            System.out.println("6) Случайно изменить свойства устройства (требование 4.3)");
+            System.out.println("6) Случайно изменить свойства устройства");
             System.out.println("7) PANIC MODE: мгновенно всё запереть/опустить");
             System.out.println("0) Выход");
             int cmd = Inputs.readIntInRange("Выбор: ", 0, 7);

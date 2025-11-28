@@ -1,33 +1,58 @@
 :- use_module(library(readutil)).
 
 sort_file(Input, Output) :-
-    read_numbers_from_file(Input, Numbers),
+    read_numbers_from_file(Input, Numbers, Extra),
     cocktail_sort(Numbers, Sorted),
     open(Output, write, Stream),
     write(Stream, Sorted),
     nl(Stream),
-    close(Stream).
+    close(Stream),
+    ( Extra == true ->
+        writeln('Предупреждение: во входном файле были лишние символы, они были проигнорированы.')
+    ; true ).
 
-read_numbers_from_file(File, Numbers) :-
+read_numbers_from_file(File, Numbers, Extra) :-
     open(File, read, Stream),
     read_stream_to_codes(Stream, Codes),
     close(Stream),
-    phrase(numbers(Numbers), Codes).
+    scan_codes(Codes, Numbers, Extra).
 
-numbers(Ns) --> blanks, number_list(Ns).
-blanks --> [C], { code_type(C, space) }, !, blanks.
-blanks --> [].
+scan_codes(Codes, Numbers, Extra) :-
+    scan_codes(Codes, [], Rev, false, Extra),
+    reverse(Rev, Numbers).
 
-number_list([N|Ns]) --> number(N), blanks, !, number_list(Ns).
-number_list([]) --> [].
+scan_codes([], Acc, Acc, Extra, Extra).
+scan_codes([C|Cs], AccIn, AccOut, ExtraIn, ExtraOut) :-
+    ( code_type(C, space) ->
+        scan_codes(Cs, AccIn, AccOut, ExtraIn, ExtraOut)
+    ; take_number([C|Cs], Rest, N) ->
+        scan_codes(Rest, [N|AccIn], AccOut, ExtraIn, ExtraOut)
+    ; Extra1 = true,
+      ( ExtraIn == true -> E2 = true ; E2 = Extra1 ),
+      scan_codes(Cs, AccIn, AccOut, E2, ExtraOut)
+    ).
 
-number(N) --> sign(S), digits(Ds), { Ds \= [], number_codes(Abs, Ds), N is S*Abs }.
-sign(1) --> "+", !.
-sign(-1) --> "-", !.
-sign(1) --> [].
+take_number(Codes, Rest, N) :-
+    take_sign_and_digits(Codes, Rest, Sign, Digits),
+    Digits \= [],
+    number_codes(Abs, Digits),
+    N is Sign*Abs.
 
-digits([D|Ds]) --> [D], { code_type(D, digit) }, !, digits(Ds).
-digits([]) --> [].
+take_sign_and_digits([C|Cs], Rest, Sign, Digits) :-
+    ( (C =:= 0'+ ; C =:= 0'-) ->
+        ( C =:= 0'- -> Sign = -1 ; Sign = 1 ),
+        collect_digits(Cs, Rest, Digits),
+        Digits \= []
+    ; code_type(C, digit) ->
+        Sign = 1,
+        collect_digits(Cs, Rest, More),
+        Digits = [C|More]
+    ).
+
+collect_digits([C|Cs], Rest, [C|Ds]) :-
+    code_type(C, digit), !,
+    collect_digits(Cs, Rest, Ds).
+collect_digits(Rest, Rest, []).
 
 cocktail_sort([], []).
 cocktail_sort([X], [X]).

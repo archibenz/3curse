@@ -1,0 +1,5 @@
+type;id;manufacturer;model;material;key;locked;param1;param2;param3;param4;wear
+RemoteControllableLock;1;Yale;Connect;Steel;1234;true;85;false;70;;4,06
+BarrierGate;2;BFT;Moovi;Aluminium;gate-key;true;45;true;12;3;0,51
+SafeLock;3;Guardian;VaultX;Titan;safe-master;true;1-2-3-4;0;false;22,0;7,47
+

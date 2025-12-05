@@ -1,0 +1,11 @@
+model/SafeLock.class
+repository/CsvDeviceRepository.class
+app/Main.class
+model/RemoteControllableLock.class
+view/ConsoleView.class
+view/ConsoleView$DeviceForm.class
+util/Inputs.class
+controller/LockController.class
+model/BarrierGate.class
+repository/DeviceRepository.class
+model/LockDevice.class

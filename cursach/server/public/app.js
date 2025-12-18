@@ -29,7 +29,7 @@ async function request(path, options = {}) {
   const contentType = resp.headers.get('Content-Type') || '';
   const data = contentType.includes('application/json') ? await resp.json() : {};
   if (!resp.ok) {
-    throw new Error(data.error || 'Ошибка запроса');
+    throw new Error(data.error || data.message || 'Ошибка запроса');
   }
   return data;
 }
@@ -78,7 +78,7 @@ function render() {
 
 async function loadEvents() {
   const data = await request('/events');
-  state.items = data.items || [];
+  state.items = Array.isArray(data) ? data : data.items || [];
   render();
   document.getElementById('envInfo').textContent = `Клиентов: ∞ | Всего записей: ${state.items.length}`;
 }

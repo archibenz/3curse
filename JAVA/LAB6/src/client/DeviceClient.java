@@ -34,6 +34,7 @@ public class DeviceClient {
         return response == null ? "Нет ответа" : response;
     }
 
+
     private String sendAndReceive(String command) throws IOException {
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(host, port), 3000);

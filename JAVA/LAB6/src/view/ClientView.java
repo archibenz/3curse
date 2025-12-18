@@ -13,8 +13,10 @@ public class ClientView {
     public int showMenu() {
         System.out.println("1) Получить список устройств с сервера");
         System.out.println("2) Пинг сервера");
+        System.out.println("3) Заблокировать устройство по ID");
+        System.out.println("4) Разблокировать устройство по ID");
         System.out.println("0) Выход");
-        return Inputs.readIntInRange("Выбор: ", 0, 2);
+        return Inputs.readIntInRange("Выбор: ", 0, 4);
     }
 
     public void showStatuses(List<String> statuses) {
@@ -31,5 +33,9 @@ public class ClientView {
 
     public void showMessage(String text) {
         System.out.println(text);
+    }
+
+    public int askDeviceId() {
+        return Inputs.readInt("Введите ID устройства: ");
     }
 }

@@ -20,6 +20,7 @@ public class ClientController {
             switch (cmd) {
                 case 1 -> showStatuses();
                 case 2 -> doPing();
+
                 case 0 -> running = false;
                 default -> view.showMessage("Неизвестная команда");
             }
@@ -44,4 +45,5 @@ public class ClientController {
             view.showMessage("Сервер недоступен: " + e.getMessage());
         }
     }
+
 }

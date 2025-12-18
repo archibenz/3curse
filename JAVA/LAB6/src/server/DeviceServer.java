@@ -44,10 +44,13 @@ public class DeviceServer {
 
             String request;
             while ((request = PacketIO.receiveMessage(in)) != null) {
-                String cmd = request.trim().toUpperCase();
+                String[] parts = request.trim().split("\\s+");
+                String cmd = parts[0].toUpperCase();
                 switch (cmd) {
                     case "LIST", "LIST_STATUS" -> sendDeviceStatuses(out);
                     case "PING" -> PacketIO.sendMessage(out, "PONG");
+                    case "LOCK" -> changeLockState(out, parts, true);
+                    case "UNLOCK" -> changeLockState(out, parts, false);
                     default -> PacketIO.sendMessage(out, "ERROR:UNKNOWN_COMMAND");
                 }
             }
@@ -64,5 +67,37 @@ public class DeviceServer {
                 .map(LockDevice::statusInfo)
                 .collect(Collectors.joining("\n"));
         PacketIO.sendMessage(out, payload);
+    }
+
+    private void changeLockState(DataOutputStream out, String[] parts, boolean lock) throws IOException {
+        if (parts.length < 2) {
+            PacketIO.sendMessage(out, "ERROR:MISSING_ID");
+            return;
+        }
+        int id;
+        try {
+            id = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            PacketIO.sendMessage(out, "ERROR:BAD_ID");
+            return;
+        }
+
+        List<LockDevice> devices = repository.loadDevices();
+        LockDevice target = devices.stream()
+                .filter(d -> d.getId() == id)
+                .findFirst()
+                .orElse(null);
+        if (target == null) {
+            PacketIO.sendMessage(out, "ERROR:NOT_FOUND");
+            return;
+        }
+
+        if (lock) {
+            target.lock();
+        } else {
+            target.unlock();
+        }
+        repository.saveDevices(devices);
+        PacketIO.sendMessage(out, "OK:" + (lock ? "LOCKED" : "UNLOCKED"));
     }
 }

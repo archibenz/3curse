@@ -1,6 +1,7 @@
 package view;
 
 import model.*;
+import repository.TextImportResult;
 import util.Inputs;
 
 import java.util.List;
@@ -8,16 +9,18 @@ import java.util.List;
 public class ConsoleView {
 
     public void showBanner() {
-        System.out.println("\n=== Лабораторная 5. MVC + файлы ===");
+        System.out.println("\n=== Лабораторные 4-5. Работа с файлами ===");
     }
 
-    public int showMainMenu() {
+    public int showMainMenu(String textDataFile) {
         System.out.println("1) Показать устройства (из памяти)");
         System.out.println("2) Добавить устройство и сохранить в CSV");
         System.out.println("3) Управлять устройством");
         System.out.println("4) Перечитать CSV и показать данные");
+        System.out.println("5) Прочитать устройства из текстового файла (ЛР4)");
+        System.out.println("6) Указать другой текстовый файл (сейчас: " + textDataFile + ")");
         System.out.println("0) Выход");
-        return Inputs.readIntInRange("Выбор: ", 0, 4);
+        return Inputs.readIntInRange("Выбор: ", 0, 6);
     }
 
     public void showDevices(List<LockDevice> devices, String title) {
@@ -105,6 +108,23 @@ public class ConsoleView {
 
     public List<Integer> askCombination(int size) {
         return Inputs.readDigitsList(size);
+    }
+
+    public String askFileName(String current) {
+        System.out.println("Текущий файл: " + current);
+        return Inputs.readString("Новый путь (можно относительный): ");
+    }
+
+    public void showImportSummary(String title, TextImportResult result) {
+        System.out.println("\n" + title);
+        System.out.printf("Источник: %s, строк прочитано: %d%n", result.source(), result.linesScanned());
+        System.out.printf("Найдено объектов: %d, свойств прочитано: %d, свойств не найдено: %d%n",
+                result.objectsFound(), result.propertiesRead(), result.propertiesMissing());
+        if (!result.devices().isEmpty()) {
+            System.out.println("--- Считанные объекты ---");
+            showDevices(result.devices(), "");
+        }
+        result.messages().forEach(System.out::println);
     }
 
     public void showMessage(String text) {

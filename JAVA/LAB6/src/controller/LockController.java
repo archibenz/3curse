@@ -17,6 +17,8 @@ public class LockController {
     public LockController(DeviceRepository repository, ConsoleView view) {
         this.repository = repository;
         this.view = view;
+        this.textImporter = new TextDeviceImporter();
+        this.textDataPath = Path.of("data", "devices.txt");
         this.devices = new ArrayList<>(repository.loadDevices());
     }
 
@@ -24,12 +26,14 @@ public class LockController {
         view.showBanner();
         boolean running = true;
         while (running) {
-            int cmd = view.showMainMenu();
+            int cmd = view.showMainMenu(textDataPath.toString());
             switch (cmd) {
                 case 1 -> view.showDevices(devices, "Устройства в памяти");
                 case 2 -> addDevice();
                 case 3 -> controlDevice();
                 case 4 -> reloadFromFile();
+                case 5 -> importFromText();
+                case 6 -> changeTextFile();
                 case 0 -> running = false;
                 default -> view.showMessage("Неизвестная команда.");
             }
@@ -122,5 +126,24 @@ public class LockController {
     private void reloadFromFile() {
         devices = new ArrayList<>(repository.loadDevices());
         view.showDevices(devices, "Данные после чтения CSV");
+    }
+
+    private void importFromText() {
+        TextImportResult result = textImporter.importFile(textDataPath);
+        if (!result.devices().isEmpty()) {
+            devices.addAll(result.devices());
+            repository.saveDevices(devices);
+        }
+        view.showImportSummary("Чтение текстового файла", result);
+    }
+
+    private void changeTextFile() {
+        String newName = view.askFileName(textDataPath.toString()).trim();
+        if (newName.isEmpty()) {
+            view.showMessage("Путь не изменён.");
+            return;
+        }
+        textDataPath = Path.of(newName);
+        view.showMessage("Теперь будет использоваться файл: " + textDataPath);
     }
 }

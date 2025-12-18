@@ -1,0 +1,15 @@
+Type: RemoteControllableLock, Manufacturer: August, Model: WiFi Smart Lock, Material: Zinc, Key: MASTER-11, Battery: 78, Locked: true, Signal: 65, Online: yes, Wear: 12.5
+
+# Шумовая строка, parser должен пропустить лишние поля
+Random text, NotAField: ???, Another: field
+
+Type: BarrierGate
+Manufacturer: Nice
+Model: Road2000
+Material: Steel
+Key: SERVICE
+AutoCloseSeconds: 8, Down: true, VehiclesPassed: 32, Queue: 3, Wear: 4.2
+
+Some unrelated data here
+
+Type: SafeLock, Manufacturer: Diplomat, Model: Alpha, Material: Alloy, Key: MASTER-22, Combination: 1-2-3-4, WrongAttempts: 1, Lockout: false, InnerTemp: 24.5

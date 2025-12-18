@@ -2,21 +2,16 @@ package controller;
 
 import model.*;
 import repository.DeviceRepository;
-import repository.TextDeviceImporter;
-import repository.TextImportResult;
 import view.ConsoleView;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.nio.file.Path;
 
 public class LockController {
 
     private final DeviceRepository repository;
     private final ConsoleView view;
-    private final TextDeviceImporter textImporter;
-    private Path textDataPath;
     private List<LockDevice> devices;
 
     public LockController(DeviceRepository repository, ConsoleView view) {

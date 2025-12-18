@@ -20,8 +20,7 @@ public class ClientController {
             switch (cmd) {
                 case 1 -> showStatuses();
                 case 2 -> doPing();
-                case 3 -> changeLockState(true);
-                case 4 -> changeLockState(false);
+
                 case 0 -> running = false;
                 default -> view.showMessage("Неизвестная команда");
             }
@@ -47,13 +46,4 @@ public class ClientController {
         }
     }
 
-    private void changeLockState(boolean lock) {
-        try {
-            int id = view.askDeviceId();
-            String resp = client.setLocked(id, lock);
-            view.showMessage("Ответ: " + resp);
-        } catch (Exception e) {
-            view.showMessage("Не удалось выполнить операцию: " + e.getMessage());
-        }
-    }
 }

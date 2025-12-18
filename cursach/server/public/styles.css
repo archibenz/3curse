@@ -121,6 +121,12 @@ body {
   font-size: 14px;
 }
 
+.badge--muted {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border);
+  color: var(--muted);
+}
+
 .muted { color: var(--muted); margin: 0; }
 .eyebrow { text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-weight: 700; margin: 0; }
 
@@ -138,6 +144,17 @@ body {
 .btn-small { padding: 8px 12px; font-size: 14px; }
 .btn:hover { transform: translateY(-1px); opacity: 0.95; }
 .btn:active { transform: translateY(0); }
+
+.icon-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 18px;
+}
 
 .actions { display: flex; gap: 10px; }
 
@@ -174,6 +191,42 @@ body {
   padding: 14px 18px;
   border-radius: var(--radius-small);
   box-shadow: var(--shadow);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: grid;
+  place-items: center;
+  z-index: 10;
+}
+
+.overlay__panel {
+  background: rgba(16, 24, 40, 0.96);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: min(420px, calc(100% - 32px));
+  box-shadow: var(--shadow);
+}
+
+.overlay__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.overlay__title {
+  margin: 8px 0;
+  font-weight: 700;
+}
+
+.overlay__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .badge.status[data-status="planned"] { background: rgba(14, 165, 233, 0.2); border-color: rgba(14,165,233,0.4); }

@@ -2,6 +2,8 @@ const state = {
   apiBase: '/api',
   items: [],
   editingId: null,
+  refreshTimer: null,
+  pendingDelete: null,
 };
 
 async function loadConfig() {
@@ -70,7 +72,7 @@ function render() {
     node.querySelector('.description').textContent = item.description || '—';
 
     node.querySelector('.edit').addEventListener('click', () => populateForm(item));
-    node.querySelector('.delete').addEventListener('click', () => deleteEvent(item.id));
+    node.querySelector('.delete').addEventListener('click', () => openDeleteMenu(item));
 
     list.appendChild(node);
   });
@@ -98,10 +100,23 @@ function populateForm(item) {
   state.editingId = item.id;
 }
 
-async function deleteEvent(id) {
-  if (!confirm('Удалить событие?')) return;
-  await request(`/events/${id}`, { method: 'DELETE' });
+function openDeleteMenu(item) {
+  state.pendingDelete = item;
+  document.getElementById('deleteTitle').textContent = item.title;
+  document.getElementById('deleteMeta').textContent = `ID ${item.id} • ${formatDate(item.created_at)}`;
+  document.getElementById('deleteMenu').classList.remove('hidden');
+}
+
+function closeDeleteMenu() {
+  state.pendingDelete = null;
+  document.getElementById('deleteMenu').classList.add('hidden');
+}
+
+async function confirmDelete() {
+  if (!state.pendingDelete) return;
+  await request(`/events/${state.pendingDelete.id}`, { method: 'DELETE' });
   toast('Событие удалено');
+  closeDeleteMenu();
   await loadEvents();
 }
 
@@ -124,6 +139,15 @@ async function handleSubmit(event) {
   await loadEvents();
 }
 
+function scheduleRefresh() {
+  if (state.refreshTimer) {
+    clearInterval(state.refreshTimer);
+  }
+  state.refreshTimer = setInterval(() => {
+    loadEvents().catch((err) => console.warn('Не удалось обновить список', err));
+  }, 12000);
+}
+
 async function init() {
   await loadConfig();
   document.getElementById('eventForm').addEventListener('submit', handleSubmit);
@@ -133,8 +157,15 @@ async function init() {
   document.getElementById('reload').addEventListener('click', loadEvents);
   document.getElementById('search').addEventListener('input', render);
   document.getElementById('statusFilter').addEventListener('change', render);
+  document.getElementById('deleteCancel').addEventListener('click', closeDeleteMenu);
+  document.getElementById('deleteCancelSecondary').addEventListener('click', closeDeleteMenu);
+  document.getElementById('deleteConfirm').addEventListener('click', confirmDelete);
+  document.getElementById('deleteMenu').addEventListener('click', (e) => {
+    if (e.target.id === 'deleteMenu') closeDeleteMenu();
+  });
 
   await loadEvents();
+  scheduleRefresh();
 }
 
 init().catch((err) => {

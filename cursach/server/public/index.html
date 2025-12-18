@@ -10,8 +10,8 @@
   <header class="hero">
     <div class="hero__content">
       <p class="eyebrow">Курсовая работа</p>
-      <h1>Клиент-серверное приложение без Spring</h1>
-      <p class="subtitle">REST API + чистый Python + SQLite. Данные и трафик фиксируются, для клиентов есть удобный интерфейс.</p>
+      <h1>Клиент-серверное приложение</h1>
+      <p class="subtitle">Простое REST API с авторизацией по токену, хранением и журналированием запросов. В комплекте — современный веб-интерфейс.</p>
       <div class="hero__actions">
         <button id="openCreate" class="btn btn-primary">Добавить событие</button>
         <button id="reload" class="btn btn-ghost">Обновить список</button>
@@ -20,7 +20,7 @@
     <div class="hero__card">
       <p class="muted">Текущее подключение</p>
       <p id="envInfo" class="badge">Загрузка...</p>
-      <p class="muted">Все клиенты работают параллельно, сервер логирует каждый запрос.</p>
+      <p class="muted">Все клиенты работают параллельно, сервер фиксирует каждый запрос.</p>
     </div>
   </header>
 
@@ -100,6 +100,22 @@
       </footer>
     </article>
   </template>
+
+  <div id="deleteMenu" class="overlay hidden">
+    <div class="overlay__panel">
+      <div class="overlay__header">
+        <p class="badge badge--muted">Подтверждение</p>
+        <button id="deleteCancel" class="icon-btn" aria-label="Закрыть">×</button>
+      </div>
+      <h3>Удалить событие?</h3>
+      <p id="deleteTitle" class="overlay__title">—</p>
+      <p id="deleteMeta" class="muted">—</p>
+      <div class="overlay__actions">
+        <button id="deleteConfirm" class="btn btn-primary">Удалить</button>
+        <button id="deleteCancelSecondary" class="btn btn-ghost">Отмена</button>
+      </div>
+    </div>
+  </div>
 
   <div id="toast" class="toast hidden"></div>
 

@@ -13,6 +13,3 @@ AutoCloseSeconds: 8, Down: true, VehiclesPassed: 32, Queue: 3, Wear: 4.2
 Some unrelated data here
 
 Type: SafeLock, Manufacturer: Diplomat, Model: Alpha, Material: Alloy, Key: MASTER-22, Combination: 1-2-3-4, WrongAttempts: 1, Lockout: false, InnerTemp: 24.5
-
-# Дополнительный пример с запятой в числе
-Type: RemoteControllableLock, Manufacturer: Aqara, Model: D100, Material: Aluminium, Key: MASTER-33, Battery: 66, Locked: false, Signal: 72, Online: true, Wear: 6,8

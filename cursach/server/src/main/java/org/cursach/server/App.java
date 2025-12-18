@@ -20,7 +20,8 @@ public class App {
         boolean healthcheck = Arrays.asList(args).contains("--healthcheck");
 
         ServerConfig config = ServerConfig.load(Path.of("config/server_config.json"));
-        int port = resolvePort(config, args);
+        PortResolution portResolution = resolvePort(config, args);
+        int port = portResolution.port();
         Database database = new Database(config.database());
         RequestLogger requestLogger = new RequestLogger(config.logFile(), database);
 
@@ -34,9 +35,14 @@ public class App {
         try {
             server = HttpServer.create(new InetSocketAddress(port), 0);
         } catch (BindException e) {
-            System.err.printf("Port %d is already in use. Change the port in config/server_config.json or pass --port=<value> to override.\n", port);
-            System.exit(1);
-            return;
+            if (portResolution.overridden()) {
+                System.err.printf("Port %d is already in use. Change the port in config/server_config.json or pass --port=<value> to override.\n", port);
+                System.exit(1);
+                return;
+            }
+
+            System.err.printf("Port %d is busy. Falling back to an available port automatically.%n", port);
+            server = HttpServer.create(new InetSocketAddress(0), 0);
         }
         server.createContext("/api/events", new EventHandler(database, requestLogger));
         server.createContext("/", new StaticFileHandler(Path.of(config.staticDir())));
@@ -47,7 +53,7 @@ public class App {
         System.out.printf("Server started on port %d. Open http://localhost:%d%n", actualPort, actualPort);
     }
 
-    private static int resolvePort(ServerConfig config, String[] args) {
+    private static PortResolution resolvePort(ServerConfig config, String[] args) {
         OptionalInt override = Arrays.stream(args)
                 .filter(arg -> arg.startsWith("--port="))
                 .findFirst()
@@ -62,6 +68,8 @@ public class App {
                 })
                 .orElseGet(OptionalInt::empty);
 
-        return override.orElse(config.port());
+        return new PortResolution(override.orElse(config.port()), override.isPresent());
     }
+
+    private record PortResolution(int port, boolean overridden) {}
 }

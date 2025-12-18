@@ -194,7 +194,7 @@ public class TextDeviceImporter {
     }
 
     private double parseDouble(String s, double def) {
-        try { return Double.parseDouble(s.trim()); } catch (Exception e) { return def; }
+        try { return Double.parseDouble(s.trim().replace(',', '.')); } catch (Exception e) { return def; }
     }
 
     private List<Integer> parseCombination(String raw) {

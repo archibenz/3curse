@@ -133,7 +133,11 @@ public class CsvDeviceRepository implements DeviceRepository {
     }
 
     private double parseDouble(String s, double def) {
-        try { return Double.parseDouble(s); } catch (NumberFormatException e) { return def; }
+        try {
+            return Double.parseDouble(s.replace(',', '.'));
+        } catch (NumberFormatException e) {
+            return def;
+        }
     }
 
     private List<Integer> parseCombination(String comb) {

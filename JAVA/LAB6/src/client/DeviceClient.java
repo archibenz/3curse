@@ -34,6 +34,11 @@ public class DeviceClient {
         return response == null ? "Нет ответа" : response;
     }
 
+    public String setLocked(int deviceId, boolean lock) throws IOException {
+        String command = (lock ? "LOCK " : "UNLOCK ") + deviceId;
+        String response = sendAndReceive(command);
+        return response == null ? "Нет ответа" : response;
+    }
 
     private String sendAndReceive(String command) throws IOException {
         try (Socket socket = new Socket()) {

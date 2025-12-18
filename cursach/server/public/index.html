@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Менеджер событий</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__content">
+      <p class="eyebrow">Курсовая работа</p>
+      <h1>Клиент-серверное приложение без Spring</h1>
+      <p class="subtitle">REST API + чистый Python + SQLite. Данные и трафик фиксируются, для клиентов есть удобный интерфейс.</p>
+      <div class="hero__actions">
+        <button id="openCreate" class="btn btn-primary">Добавить событие</button>
+        <button id="reload" class="btn btn-ghost">Обновить список</button>
+      </div>
+    </div>
+    <div class="hero__card">
+      <p class="muted">Текущее подключение</p>
+      <p id="envInfo" class="badge">Загрузка...</p>
+      <p class="muted">Все клиенты работают параллельно, сервер логирует каждый запрос.</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <p class="muted">REST коллекция</p>
+          <h2>Список событий</h2>
+        </div>
+        <div class="filters">
+          <label class="filter">
+            <span>Статус</span>
+            <select id="statusFilter">
+              <option value="all">Все</option>
+              <option value="planned">Запланировано</option>
+              <option value="in_progress">В работе</option>
+              <option value="done">Готово</option>
+            </select>
+          </label>
+          <label class="filter">
+            <span>Поиск</span>
+            <input id="search" type="search" placeholder="Название или описание" />
+          </label>
+        </div>
+      </div>
+      <div id="list" class="cards"></div>
+      <div id="empty" class="empty hidden">
+        <p>Пока нет ни одного события. Создайте его и проверьте работу API.</p>
+        <button id="createInline" class="btn btn-primary">Создать событие</button>
+      </div>
+    </section>
+
+    <section class="panel panel--form">
+      <h2 id="formTitle">Новое событие</h2>
+      <form id="eventForm" class="form">
+        <label class="field">
+          <span>Название</span>
+          <input id="title" name="title" required maxlength="120" placeholder="Например: демо REST API" />
+        </label>
+        <label class="field">
+          <span>Описание</span>
+          <textarea id="description" name="description" rows="4" placeholder="Что нужно сделать и для кого"></textarea>
+        </label>
+        <label class="field">
+          <span>Статус</span>
+          <select id="status" name="status">
+            <option value="planned">Запланировано</option>
+            <option value="in_progress">В работе</option>
+            <option value="done">Готово</option>
+          </select>
+        </label>
+        <div class="form__actions">
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+          <button type="button" id="reset" class="btn btn-ghost">Очистить</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <template id="cardTemplate">
+    <article class="card">
+      <header>
+        <p class="badge status"></p>
+        <div class="meta">
+          <p class="muted">ID <span class="id"></span></p>
+          <p class="muted created"></p>
+        </div>
+      </header>
+      <h3 class="title"></h3>
+      <p class="description"></p>
+      <footer>
+        <div class="actions">
+          <button class="btn btn-small btn-primary edit">Редактировать</button>
+          <button class="btn btn-small btn-ghost delete">Удалить</button>
+        </div>
+      </footer>
+    </article>
+  </template>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

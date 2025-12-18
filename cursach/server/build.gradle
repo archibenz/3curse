@@ -1,0 +1,16 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'org.xerial:sqlite-jdbc:3.46.0.1'
+}
+
+application {
+    mainClass = 'org.cursach.server.App'
+}

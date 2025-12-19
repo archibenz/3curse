@@ -10,11 +10,14 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class DeviceServer {
 
     private final int port;
     private final String fileName;
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public DeviceServer(int port, String fileName) {
         this.port = port;
@@ -26,8 +29,10 @@ public class DeviceServer {
             System.out.println("Сервер запущен на порту " + port + ". Файл: " + fileName);
             while (true) {
                 Socket socket = serverSocket.accept();
-                handleClient(socket);
+                executor.submit(() -> handleClient(socket));
             }
+        } finally {
+            executor.shutdown();
         }
     }
 

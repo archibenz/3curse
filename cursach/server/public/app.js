@@ -117,9 +117,10 @@ function closeDeleteMenu() {
 
 async function confirmDelete() {
   if (!state.pendingDelete) return;
+  const deleteId = state.pendingDelete.id;
   closeDeleteMenu();
   try {
-    await request(`/events/${state.pendingDelete.id}`, { method: 'DELETE' });
+    await request(`/events/${deleteId}`, { method: 'DELETE' });
     toast('Событие удалено');
     await loadEvents();
   } catch (err) {

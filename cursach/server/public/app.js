@@ -17,10 +17,7 @@ async function loadConfig() {
 }
 
 function toast(message) {
-  const toastEl = document.getElementById('toast');
-  toastEl.textContent = message;
-  toastEl.classList.remove('hidden');
-  setTimeout(() => toastEl.classList.add('hidden'), 2500);
+  if (!message) return;
 }
 
 function localizeError(err, fallback = 'Не удалось выполнить запрос') {

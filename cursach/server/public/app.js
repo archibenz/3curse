@@ -88,6 +88,9 @@ async function loadEvents() {
 function resetForm() {
   const form = document.getElementById('eventForm');
   form.reset();
+  document.getElementById('title').value = '';
+  document.getElementById('description').value = '';
+  document.getElementById('status').value = 'planned';
   state.editingId = null;
   document.getElementById('formTitle').textContent = 'Новое событие';
 }
@@ -114,10 +117,15 @@ function closeDeleteMenu() {
 
 async function confirmDelete() {
   if (!state.pendingDelete) return;
-  await request(`/events/${state.pendingDelete.id}`, { method: 'DELETE' });
-  toast('Событие удалено');
   closeDeleteMenu();
-  await loadEvents();
+  try {
+    await request(`/events/${state.pendingDelete.id}`, { method: 'DELETE' });
+    toast('Событие удалено');
+    await loadEvents();
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'Не удалось удалить событие');
+  }
 }
 
 async function handleSubmit(event) {

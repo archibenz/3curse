@@ -11,24 +11,47 @@
 - Красивый веб-интерфейс (папка `server/public`) с фильтрами, поиском и формой редактирования.
 
 ## Структура проекта
+
+### Бэкенд (Java)
 ```
-cursach/
-├── README.md                 # этот файл
-└── server/                   # Gradle-проект
-    ├── build.gradle          # зависимости: Gson + JDBC-драйвер базы
-    ├── gradlew / gradlew.bat # wrapper-скрипты (Jar необходимо сгенерировать локально)
-    ├── src/main/java/org/cursach/server/
-    │   ├── App.java          # точка входа и поднятие HttpServer
-    │   ├── config/ServerConfig.java
-    │   ├── db/Database.java
-    │   ├── http/EventHandler.java
-    │   ├── http/StaticFileHandler.java
-    │   ├── logging/RequestLogger.java
-    │   └── model/Event.java
-    ├── config/server_config.json
-    ├── public/               # фронтенд (index.html, styles.css, app.js, config.json)
-    └── logs/, data/          # создаются при первом запуске
+cursach/server/
+├── build.gradle                # зависимости, сборка и запуск
+├── gradlew / gradlew.bat       # wrapper-скрипты (Jar необходимо сгенерировать локально)
+├── src/main/java/org/cursach/server/
+│   ├── App.java                # точка входа, запуск HttpServer
+│   ├── config/ServerConfig.java# чтение конфигурации и проверка
+│   ├── db/Database.java        # доступ к данным и миграции таблиц
+│   ├── http/EventHandler.java  # REST API для событий
+│   ├── http/StaticFileHandler.java # раздача фронтенда
+│   ├── logging/RequestLogger.java  # логирование запросов
+│   └── model/Event.java        # модель события
+├── config/server_config.json   # порт и пути к данным/логам/статике
+└── logs/, data/                # создаются при первом запуске
 ```
+
+### Фронтенд (HTML/CSS/JS)
+```
+cursach/server/public/
+├── index.html   # разметка интерфейса
+├── styles.css   # оформление, сетка и компоненты
+├── app.js       # логика SPA: загрузка, CRUD, фильтры, модалки
+└── config.json  # базовый URL API
+```
+
+## Что реализовано (для отчёта)
+
+### Бэкенд (Java)
+- Поднятие встроенного HTTP-сервера и маршрутизация REST-запросов.
+- CRUD-операции для сущности «событие»: создание, чтение, обновление, удаление.
+- Конфигурация через JSON-файл (порт, пути к данным/логам/статике).
+- Логирование запросов в файл и в локальное хранилище.
+- Обслуживание нескольких клиентов за счёт пула потоков.
+
+### Фронтенд (HTML/CSS/JS)
+- Одностраничный интерфейс со списком, поиском и фильтром статуса.
+- Форма создания/редактирования событий с валидацией.
+- Уведомления о результате операций и автоперезагрузка списка.
+- Окно подтверждения удаления с быстрыми действиями.
 
 ## Запуск
 1. Перейдите в папку сервера:

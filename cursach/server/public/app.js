@@ -23,6 +23,19 @@ function toast(message) {
   setTimeout(() => toastEl.classList.add('hidden'), 2500);
 }
 
+function localizeError(err, fallback = 'Не удалось выполнить запрос') {
+  if (!err) return fallback;
+  const message = (err.message || '').trim();
+  if (!message) return fallback;
+  const mappings = {
+    'Failed to fetch': 'Нет ответа от сервера. Проверьте, что он запущен.',
+    'The string did not match the expected pattern.': 'Некорректный адрес запроса.',
+  };
+  if (mappings[message]) return mappings[message];
+  if (/[А-Яа-яЁё]/.test(message)) return message;
+  return fallback;
+}
+
 async function request(path, options = {}) {
   const resp = await fetch(`${state.apiBase}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -88,8 +101,9 @@ async function loadEvents() {
 function resetForm() {
   const form = document.getElementById('eventForm');
   form.reset();
-  document.getElementById('title').value = '';
-  document.getElementById('description').value = '';
+  form.querySelectorAll('input, textarea').forEach((field) => {
+    field.value = '';
+  });
   document.getElementById('status').value = 'planned';
   state.editingId = null;
   document.getElementById('formTitle').textContent = 'Новое событие';
@@ -122,10 +136,16 @@ async function confirmDelete() {
   try {
     await request(`/events/${deleteId}`, { method: 'DELETE' });
     toast('Событие удалено');
-    await loadEvents();
   } catch (err) {
     console.error(err);
-    toast(err.message || 'Не удалось удалить событие');
+    toast(localizeError(err, 'Не удалось удалить событие'));
+    return;
+  }
+  try {
+    await loadEvents();
+  } catch (err) {
+    console.warn('Не удалось обновить список после удаления', err);
+    toast(localizeError(err, 'Список обновится автоматически через несколько секунд.'));
   }
 }
 
@@ -137,15 +157,20 @@ async function handleSubmit(event) {
     status: document.getElementById('status').value,
   };
 
-  if (state.editingId) {
-    await request(`/events/${state.editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
-    toast('Изменения сохранены');
-  } else {
-    await request('/events', { method: 'POST', body: JSON.stringify(payload) });
-    toast('Событие создано');
+  try {
+    if (state.editingId) {
+      await request(`/events/${state.editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      toast('Изменения сохранены');
+    } else {
+      await request('/events', { method: 'POST', body: JSON.stringify(payload) });
+      toast('Событие создано');
+    }
+    resetForm();
+    await loadEvents();
+  } catch (err) {
+    console.error(err);
+    toast(localizeError(err, 'Не удалось сохранить событие'));
   }
-  resetForm();
-  await loadEvents();
 }
 
 function scheduleRefresh() {
@@ -160,9 +185,18 @@ function scheduleRefresh() {
 async function init() {
   await loadConfig();
   document.getElementById('eventForm').addEventListener('submit', handleSubmit);
-  document.getElementById('reset').addEventListener('click', resetForm);
-  document.getElementById('openCreate').addEventListener('click', resetForm);
-  document.getElementById('createInline').addEventListener('click', resetForm);
+  document.getElementById('reset').addEventListener('click', (event) => {
+    event.preventDefault();
+    resetForm();
+  });
+  document.getElementById('openCreate').addEventListener('click', (event) => {
+    event.preventDefault();
+    resetForm();
+  });
+  document.getElementById('createInline').addEventListener('click', (event) => {
+    event.preventDefault();
+    resetForm();
+  });
   document.getElementById('reload').addEventListener('click', loadEvents);
   document.getElementById('search').addEventListener('input', render);
   document.getElementById('statusFilter').addEventListener('change', render);
@@ -179,5 +213,5 @@ async function init() {
 
 init().catch((err) => {
   console.error(err);
-  toast('Не удалось загрузить данные. Проверьте сервер.');
+  toast(localizeError(err, 'Не удалось загрузить данные. Проверьте сервер.'));
 });

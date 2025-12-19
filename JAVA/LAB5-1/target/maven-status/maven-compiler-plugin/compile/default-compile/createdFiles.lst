@@ -1,0 +1,12 @@
+devices\Watch.class
+controller\DeviceController.class
+fileio\FileReader.class
+devices\Tonometer.class
+fileio\DeviceDataStructure.class
+config\Config.class
+fileio\CsvWatcher.class
+app\Main.class
+devices\WearableDevice.class
+fileio\CsvLogger.class
+view\ConsoleView.class
+devices\FitnessBand.class

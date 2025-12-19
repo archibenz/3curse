@@ -17,10 +17,7 @@ async function loadConfig() {
 }
 
 function toast(message) {
-  const toastEl = document.getElementById('toast');
-  toastEl.textContent = message;
-  toastEl.classList.remove('hidden');
-  setTimeout(() => toastEl.classList.add('hidden'), 2500);
+  if (!message) return;
 }
 
 function localizeError(err, fallback = 'Не удалось выполнить запрос') {
@@ -28,8 +25,8 @@ function localizeError(err, fallback = 'Не удалось выполнить �
   const message = (err.message || '').trim();
   if (!message) return fallback;
   const mappings = {
-    'Failed to fetch': 'Нет ответа от сервера. Проверьте, что он запущен.',
-    'The string did not match the expected pattern.': 'Некорректный адрес запроса.',
+    'Failed to fetch': 'Нет ответа от сервера. Проверьте, что он запущен',
+    'The string did not match the expected pattern.': 'Некорректный адрес запроса',
   };
   if (mappings[message]) return mappings[message];
   if (/[А-Яа-яЁё]/.test(message)) return message;
@@ -166,7 +163,12 @@ async function handleSubmit(event) {
       toast('Событие создано');
     }
     resetForm();
-    await loadEvents();
+    try {
+      await loadEvents();
+    } catch (err) {
+      console.warn('Не удалось обновить список после сохранения', err);
+      toast(localizeError(err, 'Список обновится автоматически через несколько секунд'));
+    }
   } catch (err) {
     console.error(err);
     toast(localizeError(err, 'Не удалось сохранить событие'));
@@ -213,5 +215,5 @@ async function init() {
 
 init().catch((err) => {
   console.error(err);
-  toast(localizeError(err, 'Не удалось загрузить данные. Проверьте сервер.'));
+  toast(localizeError(err, 'Не удалось загрузить данные. Проверьте сервер'));
 });

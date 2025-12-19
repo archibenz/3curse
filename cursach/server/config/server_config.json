@@ -1,0 +1,6 @@
+{
+  "port": 5000,
+  "database": "data/app.db",
+  "log_file": "logs/traffic.log",
+  "static_dir": "public"
+}

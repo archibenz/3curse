@@ -3,13 +3,30 @@
 
 :- use_module(library(pce)).
 :- use_module(library(csv)).
+:- use_module(library(readutil)).  % read_line_to_string/2
 :- dynamic panels/5.
 
 % panels(Article, Brand, Material, Size, Price).
 
-% =======================
+% =========================================================
+% SAFE GUI CALLS (важно для XPCE: не отдаём fail/exception наружу)
+% =========================================================
+
+safe_call(Goal) :-
+    catch(call(Goal), validation_failed, true),
+    catch(true, _, true).
+
+require_field(Cond, FieldObj, Title, Msg) :-
+    (   Cond
+    ->  true
+    ;   show_error_on_field(Title, Msg, FieldObj),
+        throw(validation_failed)
+    ).
+
+% =========================================================
 % MAIN MENU
-% =======================
+% =========================================================
+
 start :-
     new(MainDialog, dialog('Ceiling Panels Database System')),
     send(MainDialog, size, size(650, 450)),
@@ -75,9 +92,10 @@ start :-
 
     send(MainDialog, open_centered).
 
-% =======================
+% =========================================================
 % VIEW DATABASE
-% =======================
+% =========================================================
+
 view_database_simple :-
     findall([A,B,M,S,P], panels(A,B,M,S,P), Items),
     ( Items = []
@@ -143,9 +161,10 @@ shorten_atom(Atom, Max, Out) :-
     ; Out = Atom
     ).
 
-% =======================
+% =========================================================
 % ADD PANEL
-% =======================
+% =========================================================
+
 add_panel_dialog :-
     new(D, dialog('Add New Ceiling Panel')),
     send(D, size, size(520, 420)),
@@ -177,7 +196,7 @@ add_panel_dialog :-
     send(ButtonBox, gap, size(20, 0)),
     send(ButtonBox, append,
          button('SAVE',
-                message(@prolog, validate_and_save_panel,
+                message(@prolog, validate_and_save_panel_safe,
                         D, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj))),
     send(ButtonBox, append, button('CANCEL', message(D, destroy))),
     send(ButtonBox, alignment, center),
@@ -185,54 +204,43 @@ add_panel_dialog :-
 
     send(D, open_centered).
 
-validate_and_save_panel(D, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj) :-
+% XPCE вызывает только "обычный" предикат -> внутри уже safe_call
+validate_and_save_panel_safe(D, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj) :-
+    safe_call(validate_and_save_panel_core(D, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj)).
+
+validate_and_save_panel_core(D, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj) :-
     get(ArticleObj, selection, Article),
     get(BrandObj, selection, Brand),
     get(MaterialObj, selection, Material),
     get(SizeObj, selection, Size),
     get(PriceObj, selection, Price),
 
-    ( Article = ''
-    -> show_error_on_field('Validation Error', 'Article cannot be empty!', ArticleObj), fail
-    ; true
-    ),
+    require_field(Article \= '', ArticleObj, 'Validation Error', 'Article cannot be empty!'),
 
     normalize_article(Article, NormArticle),
-    ( panels(NormArticle, _, _, _, _)
-    -> show_error_on_field('Validation Error', 'Panel with this article already exists!', ArticleObj),
-       fail
-    ; true
-    ),
+    require_field(\+ panels(NormArticle, _, _, _, _), ArticleObj,
+                  'Validation Error', 'Panel with this article already exists!'),
 
-    ( \+ validate_name_field(Brand)
-    -> show_error_on_field('Validation Error', 'Brand must contain only letters/spaces!', BrandObj), fail
-    ; true
-    ),
+    require_field(validate_name_field(Brand), BrandObj,
+                  'Validation Error', 'Brand must contain only letters/spaces!'),
 
-    ( \+ validate_material_field(Material)
-    -> show_error_on_field('Validation Error', 'Material must contain only letters/spaces/hyphen!', MaterialObj),
-       fail
-    ; true
-    ),
+    require_field(validate_material_field(Material), MaterialObj,
+                  'Validation Error', 'Material must contain only letters/spaces/hyphen!'),
 
-    ( \+ validate_size(Size)
-    -> show_error_on_field('Validation Error', 'Size must look like 600x600 (numbers x numbers)!', SizeObj),
-       fail
-    ; true
-    ),
+    require_field(validate_size(Size), SizeObj,
+                  'Validation Error', 'Size must look like 600x600 (numbers x numbers)!'),
 
-    ( \+ validate_price(Price)
-    -> show_error_on_field('Validation Error', 'Price must be a positive integer!', PriceObj), fail
-    ; true
-    ),
+    require_field(validate_price(Price), PriceObj,
+                  'Validation Error', 'Price must be a positive integer!'),
 
     assertz(panels(NormArticle, Brand, Material, Size, Price)),
     show_message('Success', 'Ceiling panel added successfully!'),
     send(D, destroy).
 
-% =======================
+% =========================================================
 % EDIT PANEL
-% =======================
+% =========================================================
+
 edit_panel_dialog :-
     new(D, dialog('Edit Ceiling Panel')),
     send(D, size, size(520, 200)),
@@ -293,66 +301,61 @@ edit_panel_details(OldArticle, OldBrand, OldMaterial, OldSize, OldPrice) :-
 
     new(ButtonBox, dialog_group(buttons, group)),
     send(ButtonBox, gap, size(20, 0)),
+    % окно закроется только в save_edit_core при успехе
     send(ButtonBox, append,
          button('SAVE',
-                and(message(@prolog, handle_save_edit_wrapper,
-                            OldArticle, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj),
-                    message(D, destroy)))),
+                message(@prolog, save_edit_safe,
+                        D, OldArticle, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj))),
     send(ButtonBox, append, button('CANCEL', message(D, destroy))),
     send(ButtonBox, alignment, center),
     send(D, append, ButtonBox),
 
     send(D, open_centered).
 
-handle_save_edit_wrapper(OldArticle, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj) :-
-    get_text_item_string(ArticleObj, ArticleStr),
-    get_text_item_string(BrandObj, BrandStr),
-    get_text_item_string(MaterialObj, MaterialStr),
-    get_text_item_string(SizeObj, SizeStr),
-    get_text_item_string(PriceObj, PriceStr),
-    validate_and_update_panel_core(OldArticle, ArticleStr, BrandStr, MaterialStr, SizeStr, PriceStr).
+save_edit_safe(Dialog, OldArticle, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj) :-
+    safe_call(save_edit_core(Dialog, OldArticle, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj)).
 
-validate_and_update_panel_core(OldArticle, Article, Brand, Material, Size, Price) :-
-    ( Article = ''
-    -> show_message('Validation Error', 'Article cannot be empty!'), fail
-    ; true
-    ),
+save_edit_core(Dialog, OldArticle, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj) :-
+    validate_and_update_panel_core(OldArticle, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj),
+    show_message('Success', 'Panel updated successfully!'),
+    send(Dialog, destroy).
+
+validate_and_update_panel_core(OldArticle, ArticleObj, BrandObj, MaterialObj, SizeObj, PriceObj) :-
+    get_text_item_string(ArticleObj, Article),
+    get_text_item_string(BrandObj, Brand),
+    get_text_item_string(MaterialObj, Material),
+    get_text_item_string(SizeObj, Size),
+    get_text_item_string(PriceObj, Price),
+
+    require_field(Article \= '', ArticleObj, 'Validation Error', 'Article cannot be empty!'),
 
     normalize_article(Article, NormArticle),
 
-    ( NormArticle \== OldArticle,
-      panels(NormArticle, _, _, _, _)
-    -> show_message('Validation Error', 'Panel with this article already exists!'), fail
-    ; true
+    ( NormArticle \== OldArticle
+    -> require_field(\+ panels(NormArticle, _, _, _, _), ArticleObj,
+                     'Validation Error', 'Panel with this article already exists!')
+    ;  true
     ),
 
-    ( \+ validate_name_field(Brand)
-    -> show_message('Validation Error', 'Brand must contain only letters/spaces!'), fail
-    ; true
-    ),
+    require_field(validate_name_field(Brand), BrandObj,
+                  'Validation Error', 'Brand must contain only letters/spaces!'),
 
-    ( \+ validate_material_field(Material)
-    -> show_message('Validation Error', 'Material must contain only letters/spaces/hyphen!'), fail
-    ; true
-    ),
+    require_field(validate_material_field(Material), MaterialObj,
+                  'Validation Error', 'Material must contain only letters/spaces/hyphen!'),
 
-    ( \+ validate_size(Size)
-    -> show_message('Validation Error', 'Size must look like 600x600 (numbers x numbers)!'), fail
-    ; true
-    ),
+    require_field(validate_size(Size), SizeObj,
+                  'Validation Error', 'Size must look like 600x600 (numbers x numbers)!'),
 
-    ( \+ validate_price(Price)
-    -> show_message('Validation Error', 'Price must be a positive integer!'), fail
-    ; true
-    ),
+    require_field(validate_price(Price), PriceObj,
+                  'Validation Error', 'Price must be a positive integer!'),
 
     retract(panels(OldArticle, _, _, _, _)),
-    assertz(panels(NormArticle, Brand, Material, Size, Price)),
-    show_message('Success', 'Panel updated successfully!').
+    assertz(panels(NormArticle, Brand, Material, Size, Price)).
 
-% =======================
+% =========================================================
 % DELETE PANEL
-% =======================
+% =========================================================
+
 delete_panel_dialog :-
     new(D, dialog('Delete Ceiling Panel')),
     send(D, size, size(520, 200)),
@@ -382,9 +385,10 @@ delete_panel(Article) :-
     ;  show_error('Error', 'Panel not found!')
     ).
 
-% =======================
+% =========================================================
 % CLEAR DATABASE
-% =======================
+% =========================================================
+
 clear_database_dialog :-
     new(D, dialog('Clear Database')),
     send(D, size, size(520, 200)),
@@ -415,9 +419,10 @@ clear_database :-
     retractall(panels(_, _, _, _, _)),
     show_message('Success', 'Database cleared successfully!').
 
-% =======================
+% =========================================================
 % CSV IMPORT
-% =======================
+% =========================================================
+
 import_csv_dialog :-
     new(D, dialog('Import from CSV')),
     send(D, size, size(650, 240)),
@@ -560,9 +565,10 @@ format_all_errors([error(Line, Msg)|Rest], Index, Acc, Result) :-
     NextIndex is Index + 1,
     format_all_errors(Rest, NextIndex, NewAcc, Result).
 
-% =======================
+% =========================================================
 % CSV EXPORT
-% =======================
+% =========================================================
+
 export_csv_dialog :-
     new(D, dialog('Export to CSV')),
     send(D, size, size(550, 200)),
@@ -606,9 +612,10 @@ export_items(Stream, [[A,B,M,S,P]|Rest]) :-
     format(Stream, '~w;~w;~w;~w;~w~n', [A,B,M,S,P]),
     export_items(Stream, Rest).
 
-% =======================
+% =========================================================
 % VALIDATION HELPERS
-% =======================
+% =========================================================
+
 normalize_article(Article, NormalizedAtom) :-
     ( atom(Article) -> atom_string(Article, Str)
     ; string(Article) -> Str = Article
@@ -619,7 +626,6 @@ normalize_article(Article, NormalizedAtom) :-
     normalize_space(string(NormStr), UpperStr),
     atom_string(NormalizedAtom, NormStr).
 
-% Brand: letters + spaces (кириллица/латиница)
 validate_name_field(String) :-
     ( atom(String) -> atom_string(String, Str)
     ; string(String) -> Str = String
@@ -632,7 +638,6 @@ validate_name_field(String) :-
     string_chars(Trim, Chars),
     forall(member(C, Chars), (char_type(C, alpha) ; C = ' ')).
 
-% Material: letters + spaces + hyphen (для "mineral-fiber" и т.п.)
 validate_material_field(String) :-
     ( atom(String) -> atom_string(String, Str)
     ; string(String) -> Str = String
@@ -645,7 +650,6 @@ validate_material_field(String) :-
     string_chars(Trim, Chars),
     forall(member(C, Chars), (char_type(C, alpha) ; C = ' ' ; C = '-')).
 
-% Size: "600x600", "600X600", "600*600" (цифры-символ-разделитель-цифры)
 validate_size(SizeIn) :-
     ( atom(SizeIn) -> atom_string(SizeIn, Size0)
     ; string(SizeIn) -> Size0 = SizeIn
@@ -655,7 +659,6 @@ validate_size(SizeIn) :-
     normalize_space(string(Size), Size0),
     Size \= "",
     string_lower(Size, Low),
-    % разрешаем x или * как разделитель
     ( split_string(Low, "x*", " ", [W,H])
     -> validate_pos_int_string(W),
        validate_pos_int_string(H)
@@ -693,14 +696,16 @@ get_text_item_string(Item, Str) :-
     ; Str = ""
     ).
 
+% =========================================================
+% MESSAGES
+% =========================================================
+
 show_error_on_field(Title, Message, FieldObj) :-
     show_error(Title, Message),
-    send(FieldObj, selection, ''),
-    send(FieldObj, focus, @on).
+    catch(send(FieldObj, selection, ''), _, true),
+    catch(send(FieldObj, value, ''), _, true),
+    catch(send(FieldObj, focus, @on), _, true).
 
-% =======================
-% MESSAGES
-% =======================
 show_error(Title, Message) :-
     new(D, dialog(Title)),
     send(D, size, size(420, 180)),
@@ -733,9 +738,9 @@ show_message(Title, Message) :-
     send(D, append, OKButton),
     send(D, open_centered).
 
-% =======================
+% =========================================================
 % LOAD INFO
-% =======================
+% =========================================================
 :- write('================================='), nl,
    write(' CEILING PANELS DATABASE SYSTEM'), nl,
    write('================================='), nl,

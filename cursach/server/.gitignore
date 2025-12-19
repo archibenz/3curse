@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+logs/
+data/
+config/data/
+.gradle/
+build/
+**/*.log
+gradle/wrapper/gradle-wrapper.jar

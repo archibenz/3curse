@@ -20,7 +20,12 @@ Thread_sync::Thread_sync(std::vector<std::thread>* t_threads)
         flag.emplace_back(false);
         identifier.emplace_back(i);
     }
-    participants = threads->size();
+    const std::size_t level_count = 2;
+    barriers.resize(level_count);
+    for (auto& barrier : barriers)
+    {
+        barrier.participants = threads->size();
+    }
 }
 
 bool Thread_sync::get_flag(std::size_t index)
@@ -35,41 +40,59 @@ void Thread_sync::setFlag(std::size_t index)
     flag[index - 1] = true;
 }
 
-void Thread_sync::arrive_and_wait()
+void Thread_sync::barrier_wait(BarrierState& barrier)
 {
-    std::unique_lock<std::mutex> lock(barrier_mtx);
-    if (participants == 0)
+    std::unique_lock<std::mutex> lock(barrier.mtx);
+    if (barrier.participants == 0)
     {
         return;
     }
-    std::size_t gen = generation;
-    ++arrived;
-    if (arrived == participants)
+    std::size_t gen = barrier.generation;
+    ++barrier.arrived;
+    if (barrier.arrived == barrier.participants)
     {
-        generation++;
-        arrived = 0;
-        barrier_cv.notify_all();
+        barrier.generation++;
+        barrier.arrived = 0;
+        barrier.cv.notify_all();
         return;
     }
-    barrier_cv.wait(lock, [this, gen]() { return gen != generation; });
+    barrier.cv.wait(lock, [&barrier, gen]() { return gen != barrier.generation; });
 }
 
-void Thread_sync::arrive_and_drop()
+void Thread_sync::barrier_drop(BarrierState& barrier)
 {
-    std::unique_lock<std::mutex> lock(barrier_mtx);
-    if (participants == 0)
+    std::unique_lock<std::mutex> lock(barrier.mtx);
+    if (barrier.participants == 0)
     {
         return;
     }
-    std::size_t expected = participants;
-    ++arrived;
-    participants--;
-    if (arrived == expected)
+    std::size_t expected = barrier.participants;
+    ++barrier.arrived;
+    barrier.participants--;
+    if (barrier.arrived == expected)
     {
-        generation++;
-        arrived = 0;
-        barrier_cv.notify_all();
+        barrier.generation++;
+        barrier.arrived = 0;
+        barrier.cv.notify_all();
     }
+}
+
+void Thread_sync::arrive_and_wait(std::size_t level)
+{
+    if (level >= barriers.size())
+    {
+        return;
+    }
+    barrier_wait(barriers[level]);
+}
+
+void Thread_sync::arrive_and_drop(std::size_t level)
+{
+    if (level >= barriers.size())
+    {
+        return;
+    }
+    barrier_drop(barriers[level]);
 }
 
 void Thread_sync::run()
@@ -566,9 +589,12 @@ void MazeSync::generate_multithread_backtrack(std::pair<int, int> start_cell_cor
                                               std::size_t thread_identifier,
                                               Thread_sync& thread_sync_pointer)
 {
-    constexpr std::size_t sync_interval = 128;
+    constexpr std::size_t local_sync_interval = 96;
+    constexpr std::size_t global_sync_interval = 256;
+    constexpr std::size_t local_level = 0;
+    constexpr std::size_t global_level = 1;
     std::size_t step_counter = 0;
-    thread_sync_pointer.arrive_and_wait();
+    thread_sync_pointer.arrive_and_wait(global_level);
     lock_mutex(start_cell_cords.first, start_cell_cords.second);
     std::pair<int, int> current_cell_cords, next_cell_cords;
     std::stack<cell*> cell_stack;
@@ -629,13 +655,18 @@ void MazeSync::generate_multithread_backtrack(std::pair<int, int> start_cell_cor
         }
 
         ++step_counter;
-        if (step_counter % sync_interval == 0)
+        if (step_counter % local_sync_interval == 0)
         {
-            thread_sync_pointer.arrive_and_wait();
+            thread_sync_pointer.arrive_and_wait(local_level);
+        }
+        if (step_counter % global_sync_interval == 0)
+        {
+            thread_sync_pointer.arrive_and_wait(global_level);
         }
     }
 
-    thread_sync_pointer.arrive_and_drop();
+    thread_sync_pointer.arrive_and_drop(local_level);
+    thread_sync_pointer.arrive_and_drop(global_level);
 }
 
 } // namespace our

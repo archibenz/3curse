@@ -13,26 +13,26 @@ sudo_wrap() { if need_cmd sudo; then sudo "$@"; else "$@"; fi; }
 
 install_with_apt() {
   sudo_wrap apt update
-  sudo_wrap apt install -y build-essential pkg-config qt6-base-dev libsfml-dev
+  sudo_wrap apt install -y build-essential cmake pkg-config qt6-base-dev
 }
 
 install_with_dnf() {
-  sudo_wrap dnf install -y @development-tools pkgconf-pkg-config qt6-qtbase-devel sfml-devel
+  sudo_wrap dnf install -y @development-tools cmake pkgconf-pkg-config qt6-qtbase-devel
 }
 
 install_with_pacman() {
-  sudo_wrap pacman -Sy --needed --noconfirm base-devel pkgconf sfml qt6-base
+  sudo_wrap pacman -Sy --needed --noconfirm base-devel cmake pkgconf qt6-base
 }
 
 install_with_brew() {
   brew update
-  brew install pkg-config qt sfml
+  brew install cmake pkg-config qt
 }
 
 install_with_zypper() {
   sudo_wrap zypper refresh
   sudo_wrap zypper install -y --type pattern devel_C_C++
-  sudo_wrap zypper install -y pkgconf qt6-base-devel sfml-devel
+  sudo_wrap zypper install -y cmake pkgconf qt6-base-devel
 }
 
 # ── выбор пакетного менеджера ──────────────────────────────────────────────
@@ -58,9 +58,13 @@ esac
 echo "[*] Dependencies installed."
 
 # ── сборка проекта ─────────────────────────────────────────────────────────
-echo "[*] Building project with make…"
-make
-echo "[*] Build complete. Run './main' or 'make run' to start."
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BUILD_DIR="$ROOT_DIR/build"
+
+echo "[*] Building project with CMake…"
+cmake -S "$ROOT_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+cmake --build "$BUILD_DIR" --config Release
+echo "[*] Build complete. Run the binary from '$BUILD_DIR'."
 
 # ── подсказка для Windows/MSYS2 ────────────────────────────────────────────
 cat <<'EOF'
@@ -75,6 +79,9 @@ Windows / MSYS2 users:
                       mingw-w64-ucrt-x86_64-sfml \
                       mingw-w64-ucrt-x86_64-pkgconf
 
-  3. Then execute   make   from the project directory.
+  3. Then execute:
+
+     cmake -S . -B build
+     cmake --build build
 --------------------------------------------------------------------
 EOF

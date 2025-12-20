@@ -9,6 +9,7 @@
 
 #include <QApplication>
 #include <QColor>
+#include <QDir>
 #include <QFile>
 #include <QInputDialog>
 #include <QLabel>
@@ -22,6 +23,7 @@
 #include <QPushButton>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 #include <QVector>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -32,13 +34,48 @@ class MazeWidget : public QWidget
 {
 public:
     explicit MazeWidget(our::MazeSync* m = nullptr, QWidget* parent = nullptr)
-        : QWidget(parent), maze(m) {}
+        : QWidget(parent), maze(m)
+    {
+        animationTimer.setInterval(30);
+        connect(&animationTimer, &QTimer::timeout, this, [this]() {
+            if (animatedPath.empty())
+            {
+                animationTimer.stop();
+                return;
+            }
+            if (animatedIndex < animatedPath.size())
+            {
+                ++animatedIndex;
+                update();
+            }
+            else
+            {
+                animationTimer.stop();
+            }
+        });
+    }
 
     void setMaze(our::MazeSync* m) { maze = m; update(); }
-    void setPath(const std::vector<std::pair<int,int>>& p) { path = p; update(); }
+    void setPath(const std::vector<std::pair<int,int>>& p) {
+        path = p;
+        animatedPath.clear();
+        animatedIndex = 0;
+        animationTimer.stop();
+        update();
+    }
+    void animatePath(const std::vector<std::pair<int,int>>& p) {
+        path.clear();
+        animatedPath = p;
+        animatedIndex = std::min<std::size_t>(1, animatedPath.size());
+        animationTimer.start();
+        update();
+    }
     void setExits(const std::vector<std::pair<int,int>>& ex) { exits = ex; update(); }
     void setAllPaths(const std::vector<std::vector<std::pair<int,int>>>& paths) {
         allPaths = paths;
+        animatedPath.clear();
+        animatedIndex = 0;
+        animationTimer.stop();
         update();
     }
 
@@ -76,6 +113,15 @@ protected:
         std::vector<std::vector<std::pair<int,int>>> toDraw;
         if (!allPaths.empty()) {
             toDraw = allPaths;
+        } else if (animatedPath.size() > 1) {
+            std::vector<std::pair<int,int>> slice;
+            slice.reserve(animatedIndex);
+            for (std::size_t i = 0; i < animatedIndex && i < animatedPath.size(); ++i) {
+                slice.push_back(animatedPath[i]);
+            }
+            if (slice.size() > 1) {
+                toDraw.push_back(slice);
+            }
         } else if (path.size() > 1) {
             toDraw.push_back(path);
         }
@@ -135,6 +181,9 @@ protected:
 private:
     our::MazeSync* maze;
     std::vector<std::pair<int,int>> path;
+    std::vector<std::pair<int,int>> animatedPath;
+    std::size_t animatedIndex = 0;
+    QTimer animationTimer;
     std::vector<std::pair<int,int>> exits;
     std::vector<std::vector<std::pair<int,int>>> allPaths;
 };
@@ -340,14 +389,21 @@ public:
                                                 5, 5, 100, 1, &okNT);
             if(!okNT) return;
 
-            our::test_generation_time_by_thread_num(20, 20,
-                                                    minTh, maxTh,
-                                                    numTests, 1, false);
-            QString csv = "test_generation_time_by_thread_num_1mutex_cell_size.csv";
-            QString png = "speed_plot.png";
+            our::test_generation_time_comparison(20, 20,
+                                                 minTh, maxTh,
+                                                 numTests, 1);
+            const QString outputDir = "outputs";
+            QDir().mkpath(outputDir);
+            QString csvName = "test_generation_time_comparison_1mutex_cell_size.csv";
+            QString csv = outputDir + "/" + csvName;
+            QString png = outputDir + "/speed_plot.png";
+            if (QFile::exists(csvName)) {
+                QFile::remove(csv);
+                QFile::rename(csvName, csv);
+            }
 
             QProcess p;
-            p.start("python3", {"gen_speed_plot.py", csv, png});
+            p.start("python3", {"scripts/gen_speed_plot.py", csv, png});
             p.waitForFinished(-1);
 
             if(!QFile::exists(png)) {
@@ -357,7 +413,7 @@ public:
             }
             QLabel* lbl = new QLabel;
             lbl->setPixmap(QPixmap(png));
-            lbl->setWindowTitle("Скорость генерации");
+            lbl->setWindowTitle("Сравнение скорости генерации");
             lbl->setAttribute(Qt::WA_DeleteOnClose);
             lbl->show();
         });
@@ -374,7 +430,7 @@ private:
         auto route = our::find_shortest_path(*maze,
                                              maze->start_cell_cords,
                                              maze->end_cell_cords);
-        viewer->setPath(route);
+        viewer->animatePath(route);
         if(route.empty()) viewer->setExits({});
     }
 

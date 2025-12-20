@@ -29,6 +29,7 @@
 #include <QWidget>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QPushButton>
 
 namespace {
 

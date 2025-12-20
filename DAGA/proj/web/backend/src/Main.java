@@ -20,8 +20,19 @@ public class Main {
     private static final Random RNG = new Random();
 
     public static void main(String[] args) throws Exception {
-        int port = findAvailablePort();
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        HttpServer server = null;
+        int port = -1;
+        for (int candidate = PORT_START; candidate <= PORT_END; candidate++) {
+            try {
+                server = HttpServer.create(new InetSocketAddress(candidate), 0);
+                port = candidate;
+                break;
+            } catch (IOException ignored) {
+            }
+        }
+        if (server == null) {
+            throw new IOException("Нет свободного порта в диапазоне " + PORT_START + "-" + PORT_END);
+        }
         server.createContext("/api/maze", new MazeHandler());
         server.createContext("/api/benchmarks", new BenchmarkHandler());
         server.createContext("/", new StaticHandler());
@@ -30,17 +41,6 @@ public class Main {
         server.start();
     }
 
-    private static int findAvailablePort() throws IOException {
-        for (int port = PORT_START; port <= PORT_END; port++) {
-            try {
-                HttpServer probe = HttpServer.create(new InetSocketAddress(port), 0);
-                probe.stop(0);
-                return port;
-            } catch (IOException ignored) {
-            }
-        }
-        throw new IOException("No свободного порта в диапазоне " + PORT_START + "-" + PORT_END);
-    }
 
     private static class MazeHandler implements HttpHandler {
         @Override

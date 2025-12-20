@@ -9,6 +9,7 @@
 
 #include <QApplication>
 #include <QColor>
+#include <QDir>
 #include <QFile>
 #include <QInputDialog>
 #include <QLabel>
@@ -391,11 +392,18 @@ public:
             our::test_generation_time_comparison(20, 20,
                                                  minTh, maxTh,
                                                  numTests, 1);
-            QString csv = "test_generation_time_comparison_1mutex_cell_size.csv";
-            QString png = "speed_plot.png";
+            const QString outputDir = "outputs";
+            QDir().mkpath(outputDir);
+            QString csvName = "test_generation_time_comparison_1mutex_cell_size.csv";
+            QString csv = outputDir + "/" + csvName;
+            QString png = outputDir + "/speed_plot.png";
+            if (QFile::exists(csvName)) {
+                QFile::remove(csv);
+                QFile::rename(csvName, csv);
+            }
 
             QProcess p;
-            p.start("python3", {"gen_speed_plot.py", csv, png});
+            p.start("python3", {"scripts/gen_speed_plot.py", csv, png});
             p.waitForFinished(-1);
 
             if(!QFile::exists(png)) {

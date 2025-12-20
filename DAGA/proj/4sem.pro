@@ -4,8 +4,6 @@
 
 QT += widgets
 CONFIG += c++17 thread
-INCLUDEPATH += /opt/homebrew/opt/sfml@2/include
-LIBS += -L/opt/homebrew/opt/sfml@2/lib -lsfml-graphics -lsfml-window -lsfml-system
 TEMPLATE = app
 TARGET = 4sem
 INCLUDEPATH += .

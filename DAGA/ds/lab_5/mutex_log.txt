@@ -1,0 +1,10 @@
+Logging started...
+[THREAD 140264675436096] Locked mutex for player 1
+[THREAD 140264675436096] Unlocked mutex for player 1
+[THREAD 140264667043392] Locked mutex for player 2
+[THREAD 140264667043392] Unlocked mutex for player 2
+[THREAD 140264675436096] Locked mutex for player 1
+[THREAD 140264675436096] Unlocked mutex for player 1
+[THREAD 140264667043392] Locked mutex for player 2
+[THREAD 140264667043392] Unlocked mutex for player 2
+Logging ended...

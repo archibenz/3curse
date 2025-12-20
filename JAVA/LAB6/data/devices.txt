@@ -1,6 +1,5 @@
 Type: RemoteControllableLock, Manufacturer: August, Model: WiFi Smart Lock, Material: Zinc, Key: MASTER-11, Battery: 78, Locked: true, Signal: 65, Online: yes, Wear: 12.5
 
-# Шумовая строка, parser должен пропустить лишние поля
 Random text, NotAField: ???, Another: field
 
 Type: BarrierGate
@@ -14,5 +13,4 @@ Some unrelated data here
 
 Type: SafeLock, Manufacturer: Diplomat, Model: Alpha, Material: Alloy, Key: MASTER-22, Combination: 1-2-3-4, WrongAttempts: 1, Lockout: false, InnerTemp: 24.5
 
-# Дополнительный пример с запятой в числе
 Type: RemoteControllableLock, Manufacturer: Aqara, Model: D100, Material: Aluminium, Key: MASTER-33, Battery: 66, Locked: false, Signal: 72, Online: true, Wear: 6,8

@@ -6,13 +6,10 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Простая утилита для передачи сообщений с префиксом длины и разбиением на пакеты,
- * чтобы укладываться в стандартный MTU и не дробить полезные данные.
- */
+
 public final class PacketIO {
 
-    private static final int CHUNK_SIZE = 1300; // чуть меньше MTU Ethernet (1500 байт)
+    private static final int CHUNK_SIZE = 1300;
 
     private PacketIO() {}
 

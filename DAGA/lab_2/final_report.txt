@@ -1,0 +1,12 @@
+=== Итоговый отчёт по уникальным файлам ===
+
+./testdir/file3.bin                                      2048 байт
+./testdir/file4.bin                                     10240 байт
+./testdir/file6.log                                     51200 байт
+./testdir/file1.txt                                        34 байт
+./testdir/empty.txt                                         0 байт
+./testdir/file5.log                                        17 байт
+./testdir/file2.txt                                        31 байт
+
+Всего уникальных файлов: 7
+Общий размер: 63570 байт

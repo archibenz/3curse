@@ -1,0 +1,12 @@
+Logging started...
+[THREAD 7592] Took task: Fedya ni
+[THREAD 7592] Completed task: Fedya ni
+[THREAD 7592] Took task: chego ne
+[THREAD 7592] Completed task: chego ne
+[THREAD 7592] Took task:  dobilcy
+[THREAD 7592] Completed task:  dobilcy
+[THREAD 7592] Took task: a v zhiz
+[THREAD 7592] Completed task: a v zhiz
+[THREAD 7592] Took task: ni
+[THREAD 7592] Completed task: ni
+Logging ended...

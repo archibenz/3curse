@@ -20,21 +20,56 @@ Thread_sync::Thread_sync(std::vector<std::thread>* t_threads)
         flag.emplace_back(false);
         identifier.emplace_back(i);
     }
+    participants = threads->size();
 }
 
 bool Thread_sync::get_flag(std::size_t index)
 {
-    mtx.lock();
-    bool flag_value = flag[index - 1];
-    mtx.unlock();
-    return flag_value;
+    std::lock_guard<std::mutex> lock(mtx);
+    return flag[index - 1];
 }
 
 void Thread_sync::setFlag(std::size_t index)
 {
-    mtx.lock();
+    std::lock_guard<std::mutex> lock(mtx);
     flag[index - 1] = true;
-    mtx.unlock();
+}
+
+void Thread_sync::arrive_and_wait()
+{
+    std::unique_lock<std::mutex> lock(barrier_mtx);
+    if (participants == 0)
+    {
+        return;
+    }
+    std::size_t gen = generation;
+    ++arrived;
+    if (arrived == participants)
+    {
+        generation++;
+        arrived = 0;
+        barrier_cv.notify_all();
+        return;
+    }
+    barrier_cv.wait(lock, [this, gen]() { return gen != generation; });
+}
+
+void Thread_sync::arrive_and_drop()
+{
+    std::unique_lock<std::mutex> lock(barrier_mtx);
+    if (participants == 0)
+    {
+        return;
+    }
+    std::size_t expected = participants;
+    ++arrived;
+    participants--;
+    if (arrived == expected)
+    {
+        generation++;
+        arrived = 0;
+        barrier_cv.notify_all();
+    }
 }
 
 void Thread_sync::run()
@@ -531,6 +566,9 @@ void MazeSync::generate_multithread_backtrack(std::pair<int, int> start_cell_cor
                                               std::size_t thread_identifier,
                                               Thread_sync& thread_sync_pointer)
 {
+    constexpr std::size_t sync_interval = 128;
+    std::size_t step_counter = 0;
+    thread_sync_pointer.arrive_and_wait();
     lock_mutex(start_cell_cords.first, start_cell_cords.second);
     std::pair<int, int> current_cell_cords, next_cell_cords;
     std::stack<cell*> cell_stack;
@@ -589,7 +627,15 @@ void MazeSync::generate_multithread_backtrack(std::pair<int, int> start_cell_cor
                     locked_mutexes.clear();
             }
         }
+
+        ++step_counter;
+        if (step_counter % sync_interval == 0)
+        {
+            thread_sync_pointer.arrive_and_wait();
+        }
     }
+
+    thread_sync_pointer.arrive_and_drop();
 }
 
 } // namespace our

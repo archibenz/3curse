@@ -340,10 +340,10 @@ public:
                                                 5, 5, 100, 1, &okNT);
             if(!okNT) return;
 
-            our::test_generation_time_by_thread_num(20, 20,
-                                                    minTh, maxTh,
-                                                    numTests, 1, false);
-            QString csv = "test_generation_time_by_thread_num_1mutex_cell_size.csv";
+            our::test_generation_time_comparison(20, 20,
+                                                 minTh, maxTh,
+                                                 numTests, 1);
+            QString csv = "test_generation_time_comparison_1mutex_cell_size.csv";
             QString png = "speed_plot.png";
 
             QProcess p;
@@ -357,7 +357,7 @@ public:
             }
             QLabel* lbl = new QLabel;
             lbl->setPixmap(QPixmap(png));
-            lbl->setWindowTitle("Скорость генерации");
+            lbl->setWindowTitle("Сравнение скорости генерации");
             lbl->setAttribute(Qt::WA_DeleteOnClose);
             lbl->show();
         });

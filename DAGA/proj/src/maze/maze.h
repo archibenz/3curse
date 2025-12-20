@@ -1,5 +1,6 @@
 #pragma once
 
+#include <condition_variable>
 #include <cstddef>
 #include <mutex>
 #include <thread>
@@ -27,7 +28,17 @@ public:
 
     bool get_flag(std::size_t index);
     void setFlag(std::size_t index);
+    void arrive_and_wait();
+    void arrive_and_drop();
+
     void run();
+
+private:
+    std::mutex barrier_mtx;
+    std::condition_variable barrier_cv;
+    std::size_t participants = 0;
+    std::size_t arrived = 0;
+    std::size_t generation = 0;
 };
 
 class cell {
@@ -98,4 +109,3 @@ public:
 };
 
 } // namespace our
-

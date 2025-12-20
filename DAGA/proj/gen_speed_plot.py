@@ -13,24 +13,43 @@ if len(sys.argv) != 3:
 csv_file, out_png = sys.argv[1], sys.argv[2]
 from collections import defaultdict, OrderedDict
 
-# собираем времена в список для каждого числа потоков
-acc = defaultdict(list)
+mode_labels = {
+    "single_thread": "Без потоков",
+    "sync_shared": "Синхр. общий лабиринт",
+    "no_sync_independent": "Без синхр. независимые лабиринты",
+}
+
 with open(csv_file, newline="") as f:
     rdr = csv.DictReader(f)
-    for row in rdr:
-        th = int(row["Количество потоков"])
-        tm = float(row["время"])
-        acc[th].append(tm)
+    if "Режим" in rdr.fieldnames:
+        acc = defaultdict(lambda: defaultdict(list))
+        for row in rdr:
+            mode = row["Режим"]
+            th = int(row["Количество потоков"])
+            tm = float(row["время"])
+            acc[mode][th].append(tm)
 
-# рисуем среднее время
-threads = sorted(acc.keys())
-avg_times = [sum(acc[t])/len(acc[t]) for t in threads]
+        plt.figure()
+        for mode, data in acc.items():
+            threads = sorted(data.keys())
+            avg_times = [sum(data[t]) / len(data[t]) for t in threads]
+            plt.plot(threads, avg_times, marker="o", label=mode_labels.get(mode, mode))
+        plt.legend()
+    else:
+        acc = defaultdict(list)
+        for row in rdr:
+            th = int(row["Количество потоков"])
+            tm = float(row["время"])
+            acc[th].append(tm)
 
-plt.figure()
-plt.plot(threads, avg_times, marker="o")
+        threads = sorted(acc.keys())
+        avg_times = [sum(acc[t]) / len(acc[t]) for t in threads]
+        plt.figure()
+        plt.plot(threads, avg_times, marker="o")
+
 plt.xlabel("Количество потоков")
 plt.ylabel("Среднее время, мс")
-plt.title("Скорость генерации неидеального лабиринта")
+plt.title("Сравнение скорости генерации")
 plt.grid(True)
 plt.tight_layout()
 plt.savefig(out_png)

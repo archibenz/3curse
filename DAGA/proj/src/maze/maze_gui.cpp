@@ -84,11 +84,24 @@ protected:
     {
         if (!maze) return;
         QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.fillRect(rect(), QColor(20, 22, 28));
         const int cols = maze->width;
         const int rows = maze->length;
         const int cw = width()  / std::max(1, cols);
         const int ch = height() / std::max(1, rows);
 
+        p.setPen(QPen(QColor(50, 56, 70), 1));
+        for (int i = 0; i <= rows; ++i) {
+            const int y = i * ch;
+            p.drawLine(0, y, cols * cw, y);
+        }
+        for (int j = 0; j <= cols; ++j) {
+            const int x = j * cw;
+            p.drawLine(x, 0, x, rows * ch);
+        }
+
+        p.setPen(QPen(QColor(220, 226, 235), 2));
         for (int i = 0; i < rows; ++i)
         {
             for (int j = 0; j < cols; ++j)
@@ -104,10 +117,10 @@ protected:
         }
 
         p.fillRect(maze->start_cell_cords.second * cw, maze->start_cell_cords.first * ch,
-                   cw, ch, QColor(0,255,0,120));
+                   cw, ch, QColor(70, 200, 120, 160));
         for (const auto& ex : exits) {
             p.fillRect(ex.second * cw, ex.first * ch,
-                       cw, ch, QColor(255,0,0,120));
+                       cw, ch, QColor(220, 80, 80, 160));
         }
 
         std::vector<std::vector<std::pair<int,int>>> toDraw;
@@ -140,10 +153,6 @@ protected:
         if (!toDraw.empty()) {
             const auto& mainPth = toDraw[0];
             if (mainPth.size() > 1) {
-                QPen pen(colors[0]);
-                pen.setWidth(std::max(2, std::min(cw, ch) / 4));
-                pen.setCapStyle(Qt::RoundCap);
-                p.setPen(pen);
                 QPainterPath pp;
                 const auto first = mainPth.front();
                 pp.moveTo(first.second * cw + cw/2.0, first.first * ch + ch/2.0);
@@ -151,6 +160,16 @@ protected:
                     const auto pt = mainPth[k];
                     pp.lineTo(pt.second * cw + cw/2.0, pt.first * ch + ch/2.0);
                 }
+                QPen glow(QColor(60, 140, 255, 120));
+                glow.setWidth(std::max(4, std::min(cw, ch) / 3));
+                glow.setCapStyle(Qt::RoundCap);
+                p.setPen(glow);
+                p.drawPath(pp);
+
+                QPen pen(colors[0]);
+                pen.setWidth(std::max(2, std::min(cw, ch) / 5));
+                pen.setCapStyle(Qt::RoundCap);
+                p.setPen(pen);
                 p.drawPath(pp);
             }
             for (int idx = 1; idx < static_cast<int>(toDraw.size()); ++idx) {
@@ -175,6 +194,16 @@ protected:
                 }
                 p.drawPath(pp);
             }
+        }
+
+        if (!animatedPath.empty() && animatedIndex > 0) {
+            const auto head = animatedPath[std::min(animatedIndex - 1, animatedPath.size() - 1)];
+            const int cx = head.second * cw + cw / 2;
+            const int cy = head.first * ch + ch / 2;
+            const int radius = std::max(4, std::min(cw, ch) / 3);
+            p.setBrush(QColor(255, 215, 90));
+            p.setPen(QPen(QColor(255, 240, 160), 2));
+            p.drawEllipse(QPoint(cx, cy), radius, radius);
         }
     }
 
@@ -215,12 +244,14 @@ public:
         auto *btnSimple    = new QPushButton("Произвольный размер");
         auto *btnMath      = new QPushButton("Математическое описание");
         auto *btnGraphs    = new QPushButton("Графики производительности");
+        auto *btnSyncInfo  = new QPushButton("Многоуровневая синхронизация");
         auto *btnExit      = new QPushButton("Выход");
         lay->addWidget(btnClassic);
         lay->addWidget(btnImperfect);
         lay->addWidget(btnSimple);
         lay->addWidget(btnMath);
         lay->addWidget(btnGraphs);
+        lay->addWidget(btnSyncInfo);
         lay->addWidget(btnExit);
         menuWindow->setLayout(lay);
         menuWindow->move(this->geometry().right() + 20, this->geometry().top());
@@ -374,6 +405,18 @@ public:
                 "     минимальный маршрут.\n"
                 "   • Сложность: O(W·H) по времени и памяти.\n";
             MainWindow::showText("Алгоритмы", txt);
+        });
+        connect(btnSyncInfo, &QPushButton::clicked, this, [=](){
+            const char* txt =
+                "Многоуровневая синхронизация потоков\n"
+                "\n"
+                "• Используется два барьера: локальный и глобальный.\n"
+                "• Локальный барьер синхронизирует потоки чаще, чтобы держать\n"
+                "  генерацию равномерной по зонам.\n"
+                "• Глобальный барьер срабатывает реже и выравнивает общий прогресс.\n"
+                "• Барьеры повторно используются: поток ждёт остальных, затем\n"
+                "  все продолжают работу в следующем цикле.\n";
+            MainWindow::showText("Синхронизация", txt);
         });
         connect(btnGraphs, &QPushButton::clicked, this, [=](){
             bool okA=false, okB=false;

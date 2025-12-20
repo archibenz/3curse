@@ -21,10 +21,10 @@ Thread_sync::Thread_sync(std::vector<std::thread>* t_threads)
         identifier.emplace_back(i);
     }
     const std::size_t level_count = 2;
-    barriers.resize(level_count);
-    for (auto& barrier : barriers)
+    for (std::size_t i = 0; i < level_count; ++i)
     {
-        barrier.participants = threads->size();
+        barriers.emplace_back();
+        barriers.back().participants = threads->size();
     }
 }
 

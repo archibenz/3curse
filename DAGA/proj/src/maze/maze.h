@@ -2,6 +2,7 @@
 
 #include <condition_variable>
 #include <cstddef>
+#include <deque>
 #include <mutex>
 #include <thread>
 #include <unordered_set>
@@ -41,7 +42,7 @@ private:
         std::size_t arrived = 0;
         std::size_t generation = 0;
     };
-    std::vector<BarrierState> barriers;
+    std::deque<BarrierState> barriers;
     void barrier_wait(BarrierState& barrier);
     void barrier_drop(BarrierState& barrier);
 };

@@ -15,17 +15,31 @@ import java.nio.file.Paths;
 import java.util.Random;
 
 public class Main {
-    private static final int PORT = 8080;
+    private static final int PORT_START = 8080;
+    private static final int PORT_END = 8095;
     private static final Random RNG = new Random();
 
     public static void main(String[] args) throws Exception {
-        HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
+        int port = findAvailablePort();
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/api/maze", new MazeHandler());
         server.createContext("/api/benchmarks", new BenchmarkHandler());
         server.createContext("/", new StaticHandler());
         server.setExecutor(null);
-        System.out.println("Web server started on http://localhost:" + PORT);
+        System.out.println("Web server started on http://localhost:" + port);
         server.start();
+    }
+
+    private static int findAvailablePort() throws IOException {
+        for (int port = PORT_START; port <= PORT_END; port++) {
+            try {
+                HttpServer probe = HttpServer.create(new InetSocketAddress(port), 0);
+                probe.stop(0);
+                return port;
+            } catch (IOException ignored) {
+            }
+        }
+        throw new IOException("No свободного порта в диапазоне " + PORT_START + "-" + PORT_END);
     }
 
     private static class MazeHandler implements HttpHandler {
@@ -84,7 +98,7 @@ public class Main {
                 requested = "/index.html";
             }
 
-            Path base = Paths.get("web", "frontend").toAbsolutePath();
+            Path base = resolveFrontendRoot();
             Path file = base.resolve(requested.substring(1)).normalize();
             if (!file.startsWith(base) || !Files.exists(file)) {
                 exchange.sendResponseHeaders(404, 0);
@@ -109,6 +123,20 @@ public class Main {
             if (name.endsWith(".js")) return "application/javascript; charset=utf-8";
             if (name.endsWith(".png")) return "image/png";
             return "application/octet-stream";
+        }
+
+        private Path resolveFrontendRoot() {
+            Path[] candidates = new Path[] {
+                Paths.get("web", "frontend").toAbsolutePath(),
+                Paths.get("..", "frontend").toAbsolutePath(),
+                Paths.get("frontend").toAbsolutePath()
+            };
+            for (Path candidate : candidates) {
+                if (Files.exists(candidate.resolve("index.html"))) {
+                    return candidate.normalize();
+                }
+            }
+            return Paths.get("web", "frontend").toAbsolutePath();
         }
     }
 

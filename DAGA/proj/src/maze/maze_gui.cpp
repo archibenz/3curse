@@ -581,7 +581,7 @@ private:
                 "1) Перейдите в web/backend\n"
                 "2) javac src/Main.java\n"
                 "3) java -cp src Main\n"
-                "4) Откройте http://localhost:8080\n";
+                "4) Сервер выберет свободный порт (8080-8095) и выведет URL\n";
             MainWindow::showText("Web-интеграция", txt);
         });
 

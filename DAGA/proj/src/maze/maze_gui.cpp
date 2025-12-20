@@ -440,15 +440,11 @@ private:
             setUiBusy(true);
             runAsync([this, th]() {
                 auto localMaze = std::make_shared<our::MazeSync>(20,20,1);
-                std::vector<std::thread> threads(th);
                 std::vector<std::pair<int, int>> start_points;
-                our::Thread_sync sync(&threads);
                 localMaze->generate_and_set_random_start_end_points(start_points);
-                int usedThreads = th;
-                if (start_points.size() < static_cast<std::size_t>(usedThreads)) {
-                    usedThreads = static_cast<int>(start_points.size());
-                    threads.resize(usedThreads);
-                }
+                int usedThreads = std::min<int>(th, static_cast<int>(start_points.size()));
+                std::vector<std::thread> threads(usedThreads);
+                our::Thread_sync sync(&threads);
                 for (int i = 0; i < usedThreads; ++i)
                 {
                     threads[i] = std::thread(&our::MazeSync::generate_multithread_backtrack,

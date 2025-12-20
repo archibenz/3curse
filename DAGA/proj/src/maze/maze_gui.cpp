@@ -20,12 +20,11 @@
 #include <QPen>
 #include <QPixmap>
 #include <QProcess>
-#include <QPushButton>
+#include <QMenu>
 #include <QString>
 #include <QStringList>
 #include <QTimer>
 #include <QVector>
-#include <QVBoxLayout>
 #include <QWidget>
 
 namespace {
@@ -236,36 +235,47 @@ public:
         viewer->setExits({ maze->end_cell_cords });
         showPath();
 
-        menuWindow = new QWidget;
-        menuWindow->setWindowTitle("Меню");
-        auto *lay = new QVBoxLayout(menuWindow);
-        auto *btnClassic   = new QPushButton("Классический 20×20");
-        auto *btnImperfect = new QPushButton("Неидеальный 20×20");
-        auto *btnSimple    = new QPushButton("Произвольный размер");
-        auto *btnMath      = new QPushButton("Математическое описание");
-        auto *btnGraphs    = new QPushButton("Графики производительности");
-        auto *btnSyncInfo  = new QPushButton("Многоуровневая синхронизация");
-        auto *btnExit      = new QPushButton("Выход");
-        lay->addWidget(btnClassic);
-        lay->addWidget(btnImperfect);
-        lay->addWidget(btnSimple);
-        lay->addWidget(btnMath);
-        lay->addWidget(btnGraphs);
-        lay->addWidget(btnSyncInfo);
-        lay->addWidget(btnExit);
-        menuWindow->setLayout(lay);
-        menuWindow->move(this->geometry().right() + 20, this->geometry().top());
-        menuWindow->show();
+        setupMenus();
+    }
 
-        connect(btnClassic, &QPushButton::clicked, this, [this](){
-            maze = std::make_unique<our::MazeSync>(20,20,1);
+private:
+    MazeWidget* viewer;
+    std::unique_ptr<our::MazeSync> maze;
+
+    void setupMenus()
+    {
+        auto* buildMenu = menuBar()->addMenu("Построение лабиринтов");
+        auto* descMenu = menuBar()->addMenu("Описание");
+        auto* graphsMenu = menuBar()->addMenu("Графики");
+        auto* webMenu = menuBar()->addMenu("Веб-интеграция");
+        auto* exitMenu = menuBar()->addMenu("Выход");
+
+        QAction* actClassic = buildMenu->addAction("Классический (идеальный) 20×20");
+        QAction* actImperfect = buildMenu->addAction("Неидеальный (многопоточный) 20×20");
+        QAction* actPerfectSync = buildMenu->addAction("Идеальный (многопоточный + синхронизация)");
+        QAction* actCustom = buildMenu->addAction("Произвольный размер");
+
+        QAction* descBuild = descMenu->addAction("Построение лабиринта");
+        QAction* descPath = descMenu->addAction("Поиск кратчайшего пути");
+        QAction* descThreadsBuild = descMenu->addAction("Потоки при построении");
+        QAction* descThreadsPath = descMenu->addAction("Потоки при поиске пути");
+        QAction* descSync = descMenu->addAction("Синхронизация (уровни и точки)");
+
+        QAction* graphCompare = graphsMenu->addAction("1..N потоков: сравнение скорости");
+        QAction* graphFixed = graphsMenu->addAction("Фикс. потоки: синхр. vs без синхр.");
+
+        QAction* webInfo = webMenu->addAction("Инструкция по запуску Web-версии");
+        QAction* exitAct = exitMenu->addAction("Выход");
+
+        connect(actClassic, &QAction::triggered, this, [this]() {
+            maze = std::make_unique<our::MazeSync>(20, 20, 1);
             maze->generate_backtrack();
             viewer->setMaze(maze.get());
             viewer->setAllPaths({});
             viewer->setExits({ maze->end_cell_cords });
             showPath();
         });
-        connect(btnImperfect, &QPushButton::clicked, this, [this](){
+        connect(actImperfect, &QAction::triggered, this, [this]() {
             bool ok=false;
             int n = QInputDialog::getInt(this,"n выходов","Сколько дополнительных выходов?",3,1,50,1,&ok);
             if(!ok) return;
@@ -372,7 +382,36 @@ public:
             }
             viewer->setExits(exits);
         });
-        connect(btnSimple, &QPushButton::clicked, this, [this](){
+        connect(actPerfectSync, &QAction::triggered, this, [this]() {
+            bool ok=false;
+            int th = QInputDialog::getInt(this,
+                                          "Потоки",
+                                          "Количество потоков (2-16)",
+                                          4,2,16,1,&ok);
+            if(!ok) return;
+            maze = std::make_unique<our::MazeSync>(20,20,1);
+            std::vector<std::thread> threads(th);
+            std::vector<std::pair<int, int>> start_points;
+            our::Thread_sync sync(&threads);
+            maze->generate_and_set_random_start_end_points(start_points);
+            if (start_points.size() < static_cast<std::size_t>(th)) {
+                th = static_cast<int>(start_points.size());
+                threads.resize(th);
+            }
+            for (int i = 0; i < th; ++i)
+            {
+                threads[i] = std::thread(&our::MazeSync::generate_multithread_backtrack,
+                                         maze.get(), start_points[i], i + 1, std::ref(sync));
+            }
+            for (auto& t : threads) {
+                if (t.joinable()) t.join();
+            }
+            viewer->setMaze(maze.get());
+            viewer->setAllPaths({});
+            viewer->setExits({ maze->end_cell_cords });
+            showPath();
+        });
+        connect(actCustom, &QAction::triggered, this, [this](){
             bool ok1=false, ok2=false;
             int w = QInputDialog::getInt(this,"Ширина","Ширина (1-50)",20,1,50,1,&ok1);
             if(!ok1) return;
@@ -385,40 +424,58 @@ public:
             viewer->setExits({ maze->end_cell_cords });
             showPath();
         });
-        connect(btnMath, &QPushButton::clicked, this, [=](){
+
+        connect(descBuild, &QAction::triggered, this, [=](){
             const char* txt =
-                "Алгоритмы генерации и поиска пути\n"
+                "Построение лабиринта (DFS-Backtracking)\n"
                 "\n"
-                "1) Идеальный лабиринт — рекурсивный DFS-Backtracking.\n"
-                "   • Храним путь в стеке, удаляя стену к случайному непосещённому соседу.\n"
-                "   • Каждая клетка посещается ровно один раз — граф без циклов.\n"
-                "   • Сложность:  O(W·H) по времени и памяти.\n\n"
-                "2) Неидеальный лабиринт — модифицированный Backtracking.\n"
-                "   • В «тупике» с шансом ≈35 % рушим стену к уже посещённой клетке —\n"
-                "     образуется петля.  Повторяем, пока не получим n дополнительных\n"
-                "     проходов.\n"
-                "   • Потоковая версия запускает k потоков из разных углов; секции\n"
-                "     mutex_cell_size×mutex_cell_size защищены одним мьютексом.\n"
-                "   • Сложность остаётся O(W·H), но время падает ~1/k.\n\n"
-                "3) BFS — кратчайший путь.\n"
-                "   • Фронт «растёт» по клеткам без стен; первое достижение выхода даёт\n"
-                "     минимальный маршрут.\n"
-                "   • Сложность: O(W·H) по времени и памяти.\n";
-            MainWindow::showText("Алгоритмы", txt);
+                "1) Стартуем из выбранной клетки.\n"
+                "2) Выбираем случайного непосещённого соседа и ломаем стену.\n"
+                "3) Добавляем клетку в стек и продолжаем, пока есть ходы.\n"
+                "4) Если ходов нет — откатываемся по стеку.\n"
+                "Итог: каждая клетка посещается ровно один раз, без циклов.\n";
+            MainWindow::showText("Описание построения", txt);
         });
-        connect(btnSyncInfo, &QPushButton::clicked, this, [=](){
+        connect(descPath, &QAction::triggered, this, [=](){
             const char* txt =
-                "Многоуровневая синхронизация потоков\n"
+                "Поиск кратчайшего пути (BFS)\n"
                 "\n"
-                "• Используется два барьера: локальный и глобальный.\n"
-                "• Локальный барьер синхронизирует потоки чаще, чтобы держать\n"
-                "  генерацию равномерной по зонам.\n"
-                "• Глобальный барьер срабатывает реже и выравнивает общий прогресс.\n"
-                "• Барьеры повторно используются: поток ждёт остальных, затем\n"
-                "  все продолжают работу в следующем цикле.\n";
+                "1) Запускаем поиск в ширину от старта.\n"
+                "2) Расширяем фронт по доступным клеткам без стен.\n"
+                "3) Первое достижение выхода гарантирует кратчайший путь.\n"
+                "Сложность: O(W·H) по времени и памяти.\n";
+            MainWindow::showText("Описание поиска пути", txt);
+        });
+        connect(descThreadsBuild, &QAction::triggered, this, [=](){
+            const char* txt =
+                "Потоки при построении\n"
+                "\n"
+                "• Запускаем несколько потоков из разных стартовых точек.\n"
+                "• Каждая клетка помечается владельцем потока, стены рушатся локально.\n"
+                "• При встрече потоков объединяем области и продолжаем.\n";
+            MainWindow::showText("Потоки при построении", txt);
+        });
+        connect(descThreadsPath, &QAction::triggered, this, [=](){
+            const char* txt =
+                "Потоки при поиске пути\n"
+                "\n"
+                "• Поиск пути выполняется в одном потоке (BFS).\n"
+                "• Это гарантирует корректный кратчайший путь.\n"
+                "• Потоковое ускорение здесь не применяется.\n";
+            MainWindow::showText("Потоки при поиске пути", txt);
+        });
+        connect(descSync, &QAction::triggered, this, [=](){
+            const char* txt =
+                "Синхронизация (многоуровневая)\n"
+                "\n"
+                "• Локальный барьер — частая синхронизация, выравнивает прогресс\n"
+                "  потоков на коротких интервалах.\n"
+                "• Глобальный барьер — редкая синхронизация для общего выравнивания.\n"
+                "• Барьеры переиспользуются по циклам (arrive_and_wait).\n";
             MainWindow::showText("Синхронизация", txt);
         });
-        connect(btnGraphs, &QPushButton::clicked, this, [=](){
+
+        connect(graphCompare, &QAction::triggered, this, [=](){
             bool okA=false, okB=false;
             int minTh = QInputDialog::getInt(this, "Минимум потоков", "от", 2, 2, 64, 1, &okA);
             if(!okA) return;
@@ -456,17 +513,61 @@ public:
             }
             QLabel* lbl = new QLabel;
             lbl->setPixmap(QPixmap(png));
-            lbl->setWindowTitle("Сравнение скорости генерации");
+            lbl->setWindowTitle("Сравнение скорости генерации (1..N)");
             lbl->setAttribute(Qt::WA_DeleteOnClose);
             lbl->show();
         });
-        connect(btnExit, &QPushButton::clicked, qApp, &QApplication::quit);
-    }
 
-private:
-    MazeWidget* viewer;
-    std::unique_ptr<our::MazeSync> maze;
-    QWidget* menuWindow;
+        connect(graphFixed, &QAction::triggered, this, [=](){
+            bool okT=false, okN=false;
+            int th = QInputDialog::getInt(this, "Потоки", "Фиксированное число потоков", 4, 2, 64, 1, &okT);
+            if(!okT) return;
+            int numTests = QInputDialog::getInt(this, "Повторов",
+                                                "Сколько тестов на точку (5-100)?",
+                                                5, 5, 100, 1, &okN);
+            if(!okN) return;
+
+            our::test_generation_time_fixed_threads(20, 20, th, numTests, 1);
+            const QString outputDir = "outputs";
+            QDir().mkpath(outputDir);
+            QString csvName = QString("test_generation_time_fixed_threads_%1_1mutex_cell_size.csv").arg(th);
+            QString csv = outputDir + "/" + csvName;
+            QString png = outputDir + "/speed_plot_fixed.png";
+            if (QFile::exists(csvName)) {
+                QFile::remove(csv);
+                QFile::rename(csvName, csv);
+            }
+
+            QProcess p;
+            p.start("python3", {"scripts/gen_speed_plot.py", csv, png});
+            p.waitForFinished(-1);
+
+            if(!QFile::exists(png)) {
+                MainWindow::showText("Ошибка",
+                    "PNG не создан. Убедитесь, что установлен Python 3 + matplotlib.");
+                return;
+            }
+            QLabel* lbl = new QLabel;
+            lbl->setPixmap(QPixmap(png));
+            lbl->setWindowTitle("Сравнение синхронизации (фикс. потоки)");
+            lbl->setAttribute(Qt::WA_DeleteOnClose);
+            lbl->show();
+        });
+
+        connect(webInfo, &QAction::triggered, this, [=](){
+            const char* txt =
+                "Web-интеграция\n"
+                "\n"
+                "Запуск:\n"
+                "1) Перейдите в web/backend\n"
+                "2) javac src/Main.java\n"
+                "3) java -cp src Main\n"
+                "4) Откройте http://localhost:8080\n";
+            MainWindow::showText("Web-интеграция", txt);
+        });
+
+        connect(exitAct, &QAction::triggered, qApp, &QApplication::quit);
+    }
 
     void showPath()
     {

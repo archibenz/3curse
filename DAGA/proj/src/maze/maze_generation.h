@@ -29,6 +29,11 @@ void test_generation_time_comparison(int length,
                                      int max_num_threads,
                                      int num_tests,
                                      int test_mutex_cell_size);
+void test_generation_time_fixed_threads(int length,
+                                        int width,
+                                        int num_threads,
+                                        int num_tests,
+                                        int test_mutex_cell_size);
 
 int get_optimal_thread_num(int length, int width, int mutex_cell_size);
 

@@ -21,7 +21,10 @@ mode_labels = {
 
 with open(csv_file, newline="") as f:
     rdr = csv.DictReader(f)
-    if "Режим" in rdr.fieldnames:
+    has_mode = "Режим" in rdr.fieldnames
+    has_threads = "Количество потоков" in rdr.fieldnames
+
+    if has_mode and has_threads:
         acc = defaultdict(lambda: defaultdict(list))
         for row in rdr:
             mode = row["Режим"]
@@ -35,6 +38,19 @@ with open(csv_file, newline="") as f:
             avg_times = [sum(data[t]) / len(data[t]) for t in threads]
             plt.plot(threads, avg_times, marker="o", label=mode_labels.get(mode, mode))
         plt.legend()
+    elif has_mode:
+        acc = defaultdict(list)
+        for row in rdr:
+            mode = row["Режим"]
+            tm = float(row["время"])
+            acc[mode].append(tm)
+
+        modes = list(acc.keys())
+        avg_times = [sum(acc[m]) / len(acc[m]) for m in modes]
+        labels = [mode_labels.get(m, m) for m in modes]
+        plt.figure()
+        plt.bar(labels, avg_times, color=["#5DADE2", "#F5B041"])
+        plt.xticks(rotation=10)
     else:
         acc = defaultdict(list)
         for row in rdr:

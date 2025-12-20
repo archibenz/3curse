@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Maze Web</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="logo">Maze Web</div>
+    <nav class="nav">
+      <button data-tab="build" class="active">Построение</button>
+      <button data-tab="desc">Описание</button>
+      <button data-tab="graphs">Графики</button>
+      <button data-tab="web">Web</button>
+    </nav>
+  </header>
+
+  <main class="content">
+    <section id="build" class="tab active">
+      <div class="panel">
+        <h2>Построение лабиринтов</h2>
+        <p>Демо-режим показывает генерацию и анимацию пути (данные приходят с Java backend).</p>
+        <div class="actions">
+          <button id="btnGenerate">Сгенерировать</button>
+          <button id="btnAnimate">Анимировать путь</button>
+        </div>
+      </div>
+      <div class="panel">
+        <canvas id="mazeCanvas" width="600" height="600"></canvas>
+      </div>
+    </section>
+
+    <section id="desc" class="tab">
+      <div class="panel">
+        <h2>Описание</h2>
+        <ul>
+          <li><strong>Построение:</strong> DFS-Backtracking с разбиением на потоки.</li>
+          <li><strong>Поиск пути:</strong> BFS, гарантирует кратчайший путь.</li>
+          <li><strong>Синхронизация:</strong> локальные и глобальные барьеры.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="graphs" class="tab">
+      <div class="panel">
+        <h2>Графики производительности</h2>
+        <button id="btnBench">Обновить график</button>
+        <canvas id="graphCanvas" width="700" height="320"></canvas>
+      </div>
+    </section>
+
+    <section id="web" class="tab">
+      <div class="panel">
+        <h2>Web-интеграция</h2>
+        <p>Backend: Java HttpServer. Frontend: статический HTML/CSS/JS.</p>
+        <p>Запуск: <code>javac src/Main.java</code> и <code>java Main</code> из каталога <code>web/backend</code>.</p>
+        <p>Затем открыть <code>http://localhost:8080</code>.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -14,6 +14,7 @@
 #include <QInputDialog>
 #include <QLabel>
 #include <QMainWindow>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPainterPath>

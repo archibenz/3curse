@@ -372,6 +372,166 @@ void test_generation_time_by_thread_num(
     std::cout <<filename_stream.str()<< std::endl;
 }
 
+void test_generation_time_comparison(
+    int length,
+    int width,
+    int min_num_threads,
+    int max_num_threads,
+    int num_tests,
+    int test_mutex_cell_size)
+{
+    std::ostringstream filename_stream;
+    filename_stream << "test_generation_time_comparison_" << test_mutex_cell_size << "mutex_cell_size.csv";
+    std::ofstream csv_file(filename_stream.str());
+    if (!csv_file.is_open())
+    {
+        throw std::invalid_argument("Ошибка с открытием файла.");
+        return;
+    }
+
+    csv_file << "№" << "," << "Количество потоков" << "," << "Режим" << "," << "время" << "\n";
+    csv_file.flush();
+
+    for (int test = 1; test <= num_tests; ++test)
+    {
+        Maze single(length, width);
+        auto start_time = std::chrono::high_resolution_clock::now();
+        single.generate_backtrack();
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> duration = end_time - start_time;
+        csv_file << test << "," << 1 << "," << "single_thread" << ","
+                 << std::fixed << std::setprecision(2) << duration.count() << "\n";
+    }
+
+    for (int num_threads = min_num_threads; num_threads <= max_num_threads; ++num_threads)
+    {
+        for (int test = 1; test <= num_tests; ++test)
+        {
+            MazeSync my_sync(length, width, test_mutex_cell_size);
+            std::vector<std::thread> threads(num_threads);
+            std::vector<std::pair<int, int>> start_points;
+            Thread_sync myStruct(&threads);
+            my_sync.generate_and_set_random_start_end_points(start_points);
+
+            auto start_time = std::chrono::high_resolution_clock::now();
+            for (int i = 0; i < num_threads; ++i)
+            {
+                threads[i] = std::thread(&MazeSync::generate_multithread_backtrack,
+                                         &my_sync, start_points[i], i + 1, std::ref(myStruct));
+            }
+            for (auto& t : threads)
+            {
+                if (t.joinable())
+                {
+                    t.join();
+                }
+            }
+            auto end_time = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double, std::milli> duration = end_time - start_time;
+            csv_file << test << "," << num_threads << "," << "sync_shared" << ","
+                     << std::fixed << std::setprecision(2) << duration.count() << "\n";
+
+            std::vector<std::thread> workers;
+            workers.reserve(num_threads);
+            start_time = std::chrono::high_resolution_clock::now();
+            for (int i = 0; i < num_threads; ++i)
+            {
+                workers.emplace_back([=]() {
+                    Maze local(length, width);
+                    local.generate_backtrack();
+                });
+            }
+            for (auto& t : workers)
+            {
+                if (t.joinable())
+                {
+                    t.join();
+                }
+            }
+            end_time = std::chrono::high_resolution_clock::now();
+            duration = end_time - start_time;
+            csv_file << test << "," << num_threads << "," << "no_sync_independent" << ","
+                     << std::fixed << std::setprecision(2) << duration.count() << "\n";
+        }
+    }
+
+    csv_file.close();
+    std::cout << filename_stream.str() << std::endl;
+}
+
+void test_generation_time_fixed_threads(
+    int length,
+    int width,
+    int num_threads,
+    int num_tests,
+    int test_mutex_cell_size)
+{
+    std::ostringstream filename_stream;
+    filename_stream << "test_generation_time_fixed_threads_" << num_threads << "_"
+                    << test_mutex_cell_size << "mutex_cell_size.csv";
+    std::ofstream csv_file(filename_stream.str());
+    if (!csv_file.is_open())
+    {
+        throw std::invalid_argument("Ошибка с открытием файла.");
+        return;
+    }
+
+    csv_file << "№" << "," << "Режим" << "," << "время" << "\n";
+    csv_file.flush();
+
+    for (int test = 1; test <= num_tests; ++test)
+    {
+        MazeSync my_sync(length, width, test_mutex_cell_size);
+        std::vector<std::thread> threads(num_threads);
+        std::vector<std::pair<int, int>> start_points;
+        Thread_sync myStruct(&threads);
+        my_sync.generate_and_set_random_start_end_points(start_points);
+
+        auto start_time = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < num_threads; ++i)
+        {
+            threads[i] = std::thread(&MazeSync::generate_multithread_backtrack,
+                                     &my_sync, start_points[i], i + 1, std::ref(myStruct));
+        }
+        for (auto& t : threads)
+        {
+            if (t.joinable())
+            {
+                t.join();
+            }
+        }
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> duration = end_time - start_time;
+        csv_file << test << "," << "sync_shared" << ","
+                 << std::fixed << std::setprecision(2) << duration.count() << "\n";
+
+        std::vector<std::thread> workers;
+        workers.reserve(num_threads);
+        start_time = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < num_threads; ++i)
+        {
+            workers.emplace_back([=]() {
+                Maze local(length, width);
+                local.generate_backtrack();
+            });
+        }
+        for (auto& t : workers)
+        {
+            if (t.joinable())
+            {
+                t.join();
+            }
+        }
+        end_time = std::chrono::high_resolution_clock::now();
+        duration = end_time - start_time;
+        csv_file << test << "," << "no_sync_independent" << ","
+                 << std::fixed << std::setprecision(2) << duration.count() << "\n";
+    }
+
+    csv_file.close();
+    std::cout << filename_stream.str() << std::endl;
+}
+
 int get_optimal_thread_num(int length, int width, int mutex_cell_size)
 {
     int optimal_thread_num = 2 *( std::ceil(static_cast<double>(length)/mutex_cell_size) + std::ceil(static_cast<double>(width)/mutex_cell_size)- 2);

@@ -27,6 +27,8 @@
 #include <QTimer>
 #include <QVector>
 #include <QWidget>
+#include <QGroupBox>
+#include <QHBoxLayout>
 
 namespace {
 
@@ -237,11 +239,26 @@ public:
         showPath();
 
         setupMenus();
+        setupMenuWindow();
     }
 
 private:
     MazeWidget* viewer;
     std::unique_ptr<our::MazeSync> maze;
+    QWidget* menuWindow;
+    QAction* actClassic;
+    QAction* actImperfect;
+    QAction* actPerfectSync;
+    QAction* actCustom;
+    QAction* descBuild;
+    QAction* descPath;
+    QAction* descThreadsBuild;
+    QAction* descThreadsPath;
+    QAction* descSync;
+    QAction* graphCompare;
+    QAction* graphFixed;
+    QAction* webInfo;
+    QAction* exitAct;
 
     void setupMenus()
     {
@@ -251,22 +268,22 @@ private:
         auto* webMenu = menuBar()->addMenu("Веб-интеграция");
         auto* exitMenu = menuBar()->addMenu("Выход");
 
-        QAction* actClassic = buildMenu->addAction("Классический (идеальный) 20×20");
-        QAction* actImperfect = buildMenu->addAction("Неидеальный (многопоточный) 20×20");
-        QAction* actPerfectSync = buildMenu->addAction("Идеальный (многопоточный + синхронизация)");
-        QAction* actCustom = buildMenu->addAction("Произвольный размер");
+        actClassic = buildMenu->addAction("Классический (идеальный) 20×20");
+        actImperfect = buildMenu->addAction("Неидеальный (многопоточный) 20×20");
+        actPerfectSync = buildMenu->addAction("Идеальный (многопоточный + синхронизация)");
+        actCustom = buildMenu->addAction("Произвольный размер");
 
-        QAction* descBuild = descMenu->addAction("Построение лабиринта");
-        QAction* descPath = descMenu->addAction("Поиск кратчайшего пути");
-        QAction* descThreadsBuild = descMenu->addAction("Потоки при построении");
-        QAction* descThreadsPath = descMenu->addAction("Потоки при поиске пути");
-        QAction* descSync = descMenu->addAction("Синхронизация (уровни и точки)");
+        descBuild = descMenu->addAction("Построение лабиринта");
+        descPath = descMenu->addAction("Поиск кратчайшего пути");
+        descThreadsBuild = descMenu->addAction("Потоки при построении");
+        descThreadsPath = descMenu->addAction("Потоки при поиске пути");
+        descSync = descMenu->addAction("Синхронизация (уровни и точки)");
 
-        QAction* graphCompare = graphsMenu->addAction("1..N потоков: сравнение скорости");
-        QAction* graphFixed = graphsMenu->addAction("Фикс. потоки: синхр. vs без синхр.");
+        graphCompare = graphsMenu->addAction("1..N потоков: сравнение скорости");
+        graphFixed = graphsMenu->addAction("Фикс. потоки: синхр. vs без синхр.");
 
-        QAction* webInfo = webMenu->addAction("Инструкция по запуску Web-версии");
-        QAction* exitAct = exitMenu->addAction("Выход");
+        webInfo = webMenu->addAction("Инструкция по запуску Web-версии");
+        exitAct = exitMenu->addAction("Выход");
 
         connect(actClassic, &QAction::triggered, this, [this]() {
             maze = std::make_unique<our::MazeSync>(20, 20, 1);
@@ -568,6 +585,82 @@ private:
         });
 
         connect(exitAct, &QAction::triggered, qApp, &QApplication::quit);
+    }
+
+    void setupMenuWindow()
+    {
+        menuWindow = new QWidget;
+        menuWindow->setWindowTitle("Меню");
+        auto* outer = new QVBoxLayout(menuWindow);
+
+        auto* buildBox = new QGroupBox("Построение лабиринтов");
+        auto* buildLay = new QVBoxLayout(buildBox);
+        auto* btnClassic = new QPushButton("Классический (идеальный) 20×20");
+        auto* btnImperfect = new QPushButton("Неидеальный (многопоточный) 20×20");
+        auto* btnPerfectSync = new QPushButton("Идеальный (многопоточный + синхронизация)");
+        auto* btnCustom = new QPushButton("Произвольный размер");
+        buildLay->addWidget(btnClassic);
+        buildLay->addWidget(btnImperfect);
+        buildLay->addWidget(btnPerfectSync);
+        buildLay->addWidget(btnCustom);
+        buildBox->setLayout(buildLay);
+
+        auto* descBox = new QGroupBox("Описание");
+        auto* descLay = new QVBoxLayout(descBox);
+        auto* btnDescBuild = new QPushButton("Построение лабиринта");
+        auto* btnDescPath = new QPushButton("Поиск кратчайшего пути");
+        auto* btnDescThreadsBuild = new QPushButton("Потоки при построении");
+        auto* btnDescThreadsPath = new QPushButton("Потоки при поиске пути");
+        auto* btnDescSync = new QPushButton("Синхронизация (уровни и точки)");
+        descLay->addWidget(btnDescBuild);
+        descLay->addWidget(btnDescPath);
+        descLay->addWidget(btnDescThreadsBuild);
+        descLay->addWidget(btnDescThreadsPath);
+        descLay->addWidget(btnDescSync);
+        descBox->setLayout(descLay);
+
+        auto* graphsBox = new QGroupBox("Графики");
+        auto* graphsLay = new QVBoxLayout(graphsBox);
+        auto* btnGraphCompare = new QPushButton("1..N потоков: сравнение скорости");
+        auto* btnGraphFixed = new QPushButton("Фикс. потоки: синхр. vs без синхр.");
+        graphsLay->addWidget(btnGraphCompare);
+        graphsLay->addWidget(btnGraphFixed);
+        graphsBox->setLayout(graphsLay);
+
+        auto* webBox = new QGroupBox("Веб-интеграция");
+        auto* webLay = new QVBoxLayout(webBox);
+        auto* btnWebInfo = new QPushButton("Инструкция по запуску Web-версии");
+        webLay->addWidget(btnWebInfo);
+        webBox->setLayout(webLay);
+
+        auto* exitBox = new QGroupBox("Выход");
+        auto* exitLay = new QVBoxLayout(exitBox);
+        auto* btnExit = new QPushButton("Выход");
+        exitLay->addWidget(btnExit);
+        exitBox->setLayout(exitLay);
+
+        outer->addWidget(buildBox);
+        outer->addWidget(descBox);
+        outer->addWidget(graphsBox);
+        outer->addWidget(webBox);
+        outer->addWidget(exitBox);
+        menuWindow->setLayout(outer);
+        menuWindow->move(this->geometry().right() + 20, this->geometry().top());
+        menuWindow->show();
+
+        connect(btnClassic, &QPushButton::clicked, this, [this]() { actClassic->trigger(); });
+        connect(btnImperfect, &QPushButton::clicked, this, [this]() { actImperfect->trigger(); });
+        connect(btnPerfectSync, &QPushButton::clicked, this, [this]() { actPerfectSync->trigger(); });
+        connect(btnCustom, &QPushButton::clicked, this, [this]() { actCustom->trigger(); });
+        connect(btnDescBuild, &QPushButton::clicked, this, [this]() { descBuild->trigger(); });
+        connect(btnDescPath, &QPushButton::clicked, this, [this]() { descPath->trigger(); });
+        connect(btnDescThreadsBuild, &QPushButton::clicked, this, [this]() { descThreadsBuild->trigger(); });
+        connect(btnDescThreadsPath, &QPushButton::clicked, this, [this]() { descThreadsPath->trigger(); });
+        connect(btnDescSync, &QPushButton::clicked, this, [this]() { descSync->trigger(); });
+        connect(btnGraphCompare, &QPushButton::clicked, this, [this]() { graphCompare->trigger(); });
+        connect(btnGraphFixed, &QPushButton::clicked, this, [this]() { graphFixed->trigger(); });
+        connect(btnWebInfo, &QPushButton::clicked, this, [this]() { webInfo->trigger(); });
+        connect(btnExit, &QPushButton::clicked, this, [this]() { exitAct->trigger(); });
     }
 
     void showPath()

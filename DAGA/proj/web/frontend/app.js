@@ -18,6 +18,8 @@ function drawGrid(width, height, path = []) {
   const cw = mazeCanvas.width / width;
   const ch = mazeCanvas.height / height;
   mazeCtx.clearRect(0, 0, mazeCanvas.width, mazeCanvas.height);
+  mazeCtx.fillStyle = '#0e1218';
+  mazeCtx.fillRect(0, 0, mazeCanvas.width, mazeCanvas.height);
   mazeCtx.strokeStyle = '#283040';
   mazeCtx.lineWidth = 1;
   for (let i = 0; i <= height; i++) {
@@ -34,8 +36,8 @@ function drawGrid(width, height, path = []) {
   }
 
   if (path.length > 1) {
-    mazeCtx.strokeStyle = '#5dd4ff';
-    mazeCtx.lineWidth = Math.max(2, Math.min(cw, ch) / 3);
+    mazeCtx.strokeStyle = 'rgba(93, 212, 255, 0.35)';
+    mazeCtx.lineWidth = Math.max(4, Math.min(cw, ch) / 2);
     mazeCtx.beginPath();
     const [r0, c0] = path[0];
     mazeCtx.moveTo(c0 * cw + cw / 2, r0 * ch + ch / 2);
@@ -43,6 +45,10 @@ function drawGrid(width, height, path = []) {
       const [r, c] = path[i];
       mazeCtx.lineTo(c * cw + cw / 2, r * ch + ch / 2);
     }
+    mazeCtx.stroke();
+
+    mazeCtx.strokeStyle = '#5dd4ff';
+    mazeCtx.lineWidth = Math.max(2, Math.min(cw, ch) / 4);
     mazeCtx.stroke();
   }
 

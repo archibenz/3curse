@@ -1,5 +1,6 @@
 #pragma once
 
+#include <condition_variable>
 #include <cstddef>
 #include <mutex>
 #include <thread>
@@ -27,7 +28,22 @@ public:
 
     bool get_flag(std::size_t index);
     void setFlag(std::size_t index);
+    void arrive_and_wait(std::size_t level);
+    void arrive_and_drop(std::size_t level);
+
     void run();
+
+private:
+    struct BarrierState {
+        std::mutex mtx;
+        std::condition_variable cv;
+        std::size_t participants = 0;
+        std::size_t arrived = 0;
+        std::size_t generation = 0;
+    };
+    std::vector<BarrierState> barriers;
+    void barrier_wait(BarrierState& barrier);
+    void barrier_drop(BarrierState& barrier);
 };
 
 class cell {
@@ -98,4 +114,3 @@ public:
 };
 
 } // namespace our
-

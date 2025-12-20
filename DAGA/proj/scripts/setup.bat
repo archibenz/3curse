@@ -33,8 +33,8 @@ echo [*] Installing build toolchain…
 %BASH% -lc "pacman -S --needed --noconfirm ^
              base-devel ^
              mingw-w64-ucrt-x86_64-toolchain ^
+             mingw-w64-ucrt-x86_64-cmake ^
              mingw-w64-ucrt-x86_64-qt6 ^
-             mingw-w64-ucrt-x86_64-sfml ^
              mingw-w64-ucrt-x86_64-pkgconf" || (
     echo error: package install failed. Aborting.
     exit /b 1
@@ -43,9 +43,9 @@ echo [*] Installing build toolchain…
 :: 3. Конвертируем текущий путь в Unix-вид
 for /f "usebackq tokens=* delims=" %%P in (`"%BASH%" -lc "cygpath -au \"%cd%\""` ) do set "PRJ_DIR=%%P"
 
-:: 4. Сборка (make по-умолчанию берёт Makefile из корня)
+:: 4. Сборка через CMake
 echo [*] Building project…
-%BASH% -lc "cd '%PRJ_DIR%' && make -j$(nproc)" || (
+%BASH% -lc "cd '%PRJ_DIR%' && cmake -S . -B build && cmake --build build" || (
     echo error: build failed.
     exit /b 1
 )
@@ -54,8 +54,7 @@ echo.
 echo [✓] Build complete.
 echo     ──────────────────────────────────────────────
 echo     Запуск:
-echo       • двойной клик main.exe из %cd% (если Makefile кладёт exe рядом)
-echo       • или   %BASH% -lc \"cd '%PRJ_DIR%' && make run\"
+echo       • запуск из папки build (binary будет внутри build)
 echo.
 pause
 endlocal

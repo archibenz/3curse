@@ -4,8 +4,10 @@
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <functional>
 #include <memory>
 #include <vector>
+#include <thread>
 
 #include <QApplication>
 #include <QColor>
@@ -30,6 +32,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QMetaObject>
 
 namespace {
 
@@ -233,7 +236,7 @@ public:
 #ifdef Q_OS_MAC
         // menuBar()->setNativeMenuBar(false);
 #endif
-        maze = std::make_unique<our::MazeSync>(20, 20, 1);
+        maze = std::make_shared<our::MazeSync>(20, 20, 1);
         maze->generate_backtrack();
         viewer->setMaze(maze.get());
         viewer->setExits({ maze->end_cell_cords });
@@ -245,7 +248,7 @@ public:
 
 private:
     MazeWidget* viewer;
-    std::unique_ptr<our::MazeSync> maze;
+    std::shared_ptr<our::MazeSync> maze;
     QWidget* menuWindow;
     QAction* actClassic;
     QAction* actImperfect;
@@ -260,6 +263,25 @@ private:
     QAction* graphFixed;
     QAction* webInfo;
     QAction* exitAct;
+
+    void setUiBusy(bool busy)
+    {
+        if (busy) {
+            QApplication::setOverrideCursor(Qt::WaitCursor);
+        } else {
+            QApplication::restoreOverrideCursor();
+        }
+        if (menuWindow) menuWindow->setEnabled(!busy);
+        menuBar()->setEnabled(!busy);
+        viewer->setEnabled(!busy);
+    }
+
+    void runAsync(std::function<void()> task)
+    {
+        std::thread([task = std::move(task)]() mutable {
+            task();
+        }).detach();
+    }
 
     void setupMenus()
     {
@@ -287,7 +309,7 @@ private:
         exitAct = exitMenu->addAction("Выход");
 
         connect(actClassic, &QAction::triggered, this, [this]() {
-            maze = std::make_unique<our::MazeSync>(20, 20, 1);
+            maze = std::make_shared<our::MazeSync>(20, 20, 1);
             maze->generate_backtrack();
             viewer->setMaze(maze.get());
             viewer->setAllPaths({});
@@ -305,101 +327,108 @@ private:
                                           maxThreads,1,maxThreads,1,&ok);
             if(!ok) return;
 
-            maze = std::make_unique<our::MazeSync>(20,20,1);
-            maze->start_cell_cords = maze->get_random_start_point();
-            maze->generate_multithread_imperfect(n, th);
+            setUiBusy(true);
+            runAsync([this, n, th]() {
+                auto localMaze = std::make_shared<our::MazeSync>(20,20,1);
+                localMaze->start_cell_cords = localMaze->get_random_start_point();
+                localMaze->generate_multithread_imperfect(n, th);
 
-            auto exits = our::add_border_exits(*maze, n);
-            int minDist = std::max(maze->width, maze->length) / n;
-            std::vector<std::pair<int,int>> filtered;
-            for (const auto& ex : exits) {
-                bool good = true;
-                for (const auto& prev : filtered) {
-                    int d = std::abs(ex.first - prev.first)
-                          + std::abs(ex.second - prev.second);
-                    if (d < minDist) { good = false; break; }
-                }
-                if (good) filtered.push_back(ex);
-            }
-            while (static_cast<int>(filtered.size()) < n) {
-                auto extra = our::add_border_exits(*maze, 1)[0];
-                bool good = true;
-                for (const auto& prev : filtered) {
-                    int d = std::abs(extra.first - prev.first)
-                          + std::abs(extra.second - prev.second);
-                    if (d < minDist) { good = false; break; }
-                }
-                if (good) filtered.push_back(extra);
-            }
-            exits = filtered;
-
-            std::vector<std::vector<std::pair<int,int>>> allPathsList;
-            for (const auto& ex : exits) {
-                auto pth = our::find_shortest_path(*maze, maze->start_cell_cords, ex);
-                if (pth.empty()) {
-                    int cx = maze->start_cell_cords.first, cy = maze->start_cell_cords.second;
-                    int ex_r = ex.first, ex_c = ex.second;
-                    while (cx < ex_r) {
-                        maze->cell_array[cx][cy].wall_direction_mask &= ~our::Down;
-                        maze->cell_array[cx+1][cy].wall_direction_mask &= ~our::Up;
-                        ++cx;
+                auto exits = our::add_border_exits(*localMaze, n);
+                int minDist = std::max(localMaze->width, localMaze->length) / n;
+                std::vector<std::pair<int,int>> filtered;
+                for (const auto& ex : exits) {
+                    bool good = true;
+                    for (const auto& prev : filtered) {
+                        int d = std::abs(ex.first - prev.first)
+                              + std::abs(ex.second - prev.second);
+                        if (d < minDist) { good = false; break; }
                     }
-                    while (cx > ex_r) {
-                        maze->cell_array[cx][cy].wall_direction_mask &= ~our::Up;
-                        maze->cell_array[cx-1][cy].wall_direction_mask &= ~our::Down;
-                        --cx;
-                    }
-                    while (cy < ex_c) {
-                        maze->cell_array[cx][cy].wall_direction_mask &= ~our::Right;
-                        maze->cell_array[cx][cy+1].wall_direction_mask &= ~our::Left;
-                        ++cy;
-                    }
-                    while (cy > ex_c) {
-                        maze->cell_array[cx][cy].wall_direction_mask &= ~our::Left;
-                        maze->cell_array[cx][cy-1].wall_direction_mask &= ~our::Right;
-                        --cy;
-                    }
-                    pth = our::find_shortest_path(*maze, maze->start_cell_cords, ex);
+                    if (good) filtered.push_back(ex);
                 }
-                allPathsList.push_back(pth);
-            }
-
-            std::vector<std::pair<int,int>> nearestPath, farthestPath;
-            int minLen = INT_MAX, maxLen = -1;
-            for (const auto& pth : allPathsList) {
-                int len = static_cast<int>(pth.size());
-                if (len < minLen) {
-                    minLen = len;
-                    nearestPath = pth;
+                while (static_cast<int>(filtered.size()) < n) {
+                    auto extra = our::add_border_exits(*localMaze, 1)[0];
+                    bool good = true;
+                    for (const auto& prev : filtered) {
+                        int d = std::abs(extra.first - prev.first)
+                              + std::abs(extra.second - prev.second);
+                        if (d < minDist) { good = false; break; }
+                    }
+                    if (good) filtered.push_back(extra);
                 }
-                if (len > maxLen) {
-                    maxLen = len;
-                    farthestPath = pth;
+                exits = filtered;
+
+                std::vector<std::vector<std::pair<int,int>>> allPathsList;
+                for (const auto& ex : exits) {
+                    auto pth = our::find_shortest_path(*localMaze, localMaze->start_cell_cords, ex);
+                    if (pth.empty()) {
+                        int cx = localMaze->start_cell_cords.first, cy = localMaze->start_cell_cords.second;
+                        int ex_r = ex.first, ex_c = ex.second;
+                        while (cx < ex_r) {
+                            localMaze->cell_array[cx][cy].wall_direction_mask &= ~our::Down;
+                            localMaze->cell_array[cx+1][cy].wall_direction_mask &= ~our::Up;
+                            ++cx;
+                        }
+                        while (cx > ex_r) {
+                            localMaze->cell_array[cx][cy].wall_direction_mask &= ~our::Up;
+                            localMaze->cell_array[cx-1][cy].wall_direction_mask &= ~our::Down;
+                            --cx;
+                        }
+                        while (cy < ex_c) {
+                            localMaze->cell_array[cx][cy].wall_direction_mask &= ~our::Right;
+                            localMaze->cell_array[cx][cy+1].wall_direction_mask &= ~our::Left;
+                            ++cy;
+                        }
+                        while (cy > ex_c) {
+                            localMaze->cell_array[cx][cy].wall_direction_mask &= ~our::Left;
+                            localMaze->cell_array[cx][cy-1].wall_direction_mask &= ~our::Right;
+                            --cy;
+                        }
+                        pth = our::find_shortest_path(*localMaze, localMaze->start_cell_cords, ex);
+                    }
+                    allPathsList.push_back(pth);
                 }
-            }
 
-            QStringList options = { "Ближайший", "Самый дальний", "Все" };
-            bool okChoice = false;
-            QString choice = QInputDialog::getItem(this, "Выбор пути", "Какой путь отображать?", options, 0, false, &okChoice);
-            if (!okChoice) {
-                choice = options[0];
-            }
+                QMetaObject::invokeMethod(this, [this, localMaze, exits, allPathsList]() mutable {
+                    setUiBusy(false);
+                    std::vector<std::pair<int,int>> nearestPath, farthestPath;
+                    int minLen = INT_MAX, maxLen = -1;
+                    for (const auto& pth : allPathsList) {
+                        int len = static_cast<int>(pth.size());
+                        if (len < minLen) {
+                            minLen = len;
+                            nearestPath = pth;
+                        }
+                        if (len > maxLen) {
+                            maxLen = len;
+                            farthestPath = pth;
+                        }
+                    }
 
-            viewer->setMaze(maze.get());
-            viewer->setAllPaths({});
-            if (choice == options[0]) {
-                maze->end_cell_cords = nearestPath.empty() ? maze->end_cell_cords : nearestPath.back();
-                viewer->setPath(nearestPath);
-            } else if (choice == options[1]) {
-                maze->end_cell_cords = farthestPath.empty() ? maze->end_cell_cords : farthestPath.back();
-                viewer->setPath(farthestPath);
-            } else {
-                std::sort(allPathsList.begin(), allPathsList.end(),
-                          [](const auto& a, const auto& b){ return a.size() < b.size(); });
-                viewer->setAllPaths(allPathsList);
-                viewer->setPath({});
-            }
-            viewer->setExits(exits);
+                    QStringList options = { "Ближайший", "Самый дальний", "Все" };
+                    bool okChoice = false;
+                    QString choice = QInputDialog::getItem(this, "Выбор пути", "Какой путь отображать?", options, 0, false, &okChoice);
+                    if (!okChoice) {
+                        choice = options[0];
+                    }
+
+                    maze = localMaze;
+                    viewer->setMaze(maze.get());
+                    viewer->setAllPaths({});
+                    if (choice == options[0]) {
+                        maze->end_cell_cords = nearestPath.empty() ? maze->end_cell_cords : nearestPath.back();
+                        viewer->setPath(nearestPath);
+                    } else if (choice == options[1]) {
+                        maze->end_cell_cords = farthestPath.empty() ? maze->end_cell_cords : farthestPath.back();
+                        viewer->setPath(farthestPath);
+                    } else {
+                        std::sort(allPathsList.begin(), allPathsList.end(),
+                                  [](const auto& a, const auto& b){ return a.size() < b.size(); });
+                        viewer->setAllPaths(allPathsList);
+                        viewer->setPath({});
+                    }
+                    viewer->setExits(exits);
+                }, Qt::QueuedConnection);
+            });
         });
         connect(actPerfectSync, &QAction::triggered, this, [this]() {
             bool ok=false;
@@ -408,27 +437,35 @@ private:
                                           "Количество потоков (2-16)",
                                           4,2,16,1,&ok);
             if(!ok) return;
-            maze = std::make_unique<our::MazeSync>(20,20,1);
-            std::vector<std::thread> threads(th);
-            std::vector<std::pair<int, int>> start_points;
-            our::Thread_sync sync(&threads);
-            maze->generate_and_set_random_start_end_points(start_points);
-            if (start_points.size() < static_cast<std::size_t>(th)) {
-                th = static_cast<int>(start_points.size());
-                threads.resize(th);
-            }
-            for (int i = 0; i < th; ++i)
-            {
-                threads[i] = std::thread(&our::MazeSync::generate_multithread_backtrack,
-                                         maze.get(), start_points[i], i + 1, std::ref(sync));
-            }
-            for (auto& t : threads) {
-                if (t.joinable()) t.join();
-            }
-            viewer->setMaze(maze.get());
-            viewer->setAllPaths({});
-            viewer->setExits({ maze->end_cell_cords });
-            showPath();
+            setUiBusy(true);
+            runAsync([this, th]() {
+                auto localMaze = std::make_shared<our::MazeSync>(20,20,1);
+                std::vector<std::thread> threads(th);
+                std::vector<std::pair<int, int>> start_points;
+                our::Thread_sync sync(&threads);
+                localMaze->generate_and_set_random_start_end_points(start_points);
+                int usedThreads = th;
+                if (start_points.size() < static_cast<std::size_t>(usedThreads)) {
+                    usedThreads = static_cast<int>(start_points.size());
+                    threads.resize(usedThreads);
+                }
+                for (int i = 0; i < usedThreads; ++i)
+                {
+                    threads[i] = std::thread(&our::MazeSync::generate_multithread_backtrack,
+                                             localMaze.get(), start_points[i], i + 1, std::ref(sync));
+                }
+                for (auto& t : threads) {
+                    if (t.joinable()) t.join();
+                }
+                QMetaObject::invokeMethod(this, [this, localMaze]() {
+                    setUiBusy(false);
+                    maze = localMaze;
+                    viewer->setMaze(maze.get());
+                    viewer->setAllPaths({});
+                    viewer->setExits({ maze->end_cell_cords });
+                    showPath();
+                }, Qt::QueuedConnection);
+            });
         });
         connect(actCustom, &QAction::triggered, this, [this](){
             bool ok1=false, ok2=false;
@@ -436,7 +473,7 @@ private:
             if(!ok1) return;
             int h = QInputDialog::getInt(this,"Высота","Высота (1-50)",20,1,50,1,&ok2);
             if(!ok2) return;
-            maze = std::make_unique<our::MazeSync>(h,w,1);
+            maze = std::make_shared<our::MazeSync>(h,w,1);
             maze->generate_backtrack();
             viewer->setMaze(maze.get());
             viewer->setAllPaths({});
@@ -508,33 +545,37 @@ private:
                                                 5, 5, 100, 1, &okNT);
             if(!okNT) return;
 
-            our::test_generation_time_comparison(20, 20,
-                                                 minTh, maxTh,
-                                                 numTests, 1);
-            const QString outputDir = "outputs";
-            QDir().mkpath(outputDir);
-            QString csvName = "test_generation_time_comparison_1mutex_cell_size.csv";
-            QString csv = outputDir + "/" + csvName;
-            QString png = outputDir + "/speed_plot.png";
-            if (QFile::exists(csvName)) {
-                QFile::remove(csv);
-                QFile::rename(csvName, csv);
-            }
+            setUiBusy(true);
+            runAsync([this, minTh, maxTh, numTests]() {
+                our::test_generation_time_comparison(20, 20, minTh, maxTh, numTests, 1);
+                QMetaObject::invokeMethod(this, [this]() {
+                    setUiBusy(false);
+                    const QString outputDir = "outputs";
+                    QDir().mkpath(outputDir);
+                    QString csvName = "test_generation_time_comparison_1mutex_cell_size.csv";
+                    QString csv = outputDir + "/" + csvName;
+                    QString png = outputDir + "/speed_plot.png";
+                    if (QFile::exists(csvName)) {
+                        QFile::remove(csv);
+                        QFile::rename(csvName, csv);
+                    }
 
-            QProcess p;
-            p.start("python3", {"scripts/gen_speed_plot.py", csv, png});
-            p.waitForFinished(-1);
+                    QProcess p;
+                    p.start("python3", {"scripts/gen_speed_plot.py", csv, png});
+                    p.waitForFinished(-1);
 
-            if(!QFile::exists(png)) {
-                MainWindow::showText("Ошибка",
-                    "PNG не создан. Убедитесь, что установлен Python 3 + matplotlib.");
-                return;
-            }
-            QLabel* lbl = new QLabel;
-            lbl->setPixmap(QPixmap(png));
-            lbl->setWindowTitle("Сравнение скорости генерации (1..N)");
-            lbl->setAttribute(Qt::WA_DeleteOnClose);
-            lbl->show();
+                    if(!QFile::exists(png)) {
+                        MainWindow::showText("Ошибка",
+                            "PNG не создан. Убедитесь, что установлен Python 3 + matplotlib.");
+                        return;
+                    }
+                    QLabel* lbl = new QLabel;
+                    lbl->setPixmap(QPixmap(png));
+                    lbl->setWindowTitle("Сравнение скорости генерации (1..N)");
+                    lbl->setAttribute(Qt::WA_DeleteOnClose);
+                    lbl->show();
+                }, Qt::QueuedConnection);
+            });
         });
 
         connect(graphFixed, &QAction::triggered, this, [=](){
@@ -546,31 +587,37 @@ private:
                                                 5, 5, 100, 1, &okN);
             if(!okN) return;
 
-            our::test_generation_time_fixed_threads(20, 20, th, numTests, 1);
-            const QString outputDir = "outputs";
-            QDir().mkpath(outputDir);
-            QString csvName = QString("test_generation_time_fixed_threads_%1_1mutex_cell_size.csv").arg(th);
-            QString csv = outputDir + "/" + csvName;
-            QString png = outputDir + "/speed_plot_fixed.png";
-            if (QFile::exists(csvName)) {
-                QFile::remove(csv);
-                QFile::rename(csvName, csv);
-            }
+            setUiBusy(true);
+            runAsync([this, th, numTests]() {
+                our::test_generation_time_fixed_threads(20, 20, th, numTests, 1);
+                QMetaObject::invokeMethod(this, [this, th]() {
+                    setUiBusy(false);
+                    const QString outputDir = "outputs";
+                    QDir().mkpath(outputDir);
+                    QString csvName = QString("test_generation_time_fixed_threads_%1_1mutex_cell_size.csv").arg(th);
+                    QString csv = outputDir + "/" + csvName;
+                    QString png = outputDir + "/speed_plot_fixed.png";
+                    if (QFile::exists(csvName)) {
+                        QFile::remove(csv);
+                        QFile::rename(csvName, csv);
+                    }
 
-            QProcess p;
-            p.start("python3", {"scripts/gen_speed_plot.py", csv, png});
-            p.waitForFinished(-1);
+                    QProcess p;
+                    p.start("python3", {"scripts/gen_speed_plot.py", csv, png});
+                    p.waitForFinished(-1);
 
-            if(!QFile::exists(png)) {
-                MainWindow::showText("Ошибка",
-                    "PNG не создан. Убедитесь, что установлен Python 3 + matplotlib.");
-                return;
-            }
-            QLabel* lbl = new QLabel;
-            lbl->setPixmap(QPixmap(png));
-            lbl->setWindowTitle("Сравнение синхронизации (фикс. потоки)");
-            lbl->setAttribute(Qt::WA_DeleteOnClose);
-            lbl->show();
+                    if(!QFile::exists(png)) {
+                        MainWindow::showText("Ошибка",
+                            "PNG не создан. Убедитесь, что установлен Python 3 + matplotlib.");
+                        return;
+                    }
+                    QLabel* lbl = new QLabel;
+                    lbl->setPixmap(QPixmap(png));
+                    lbl->setWindowTitle("Сравнение синхронизации (фикс. потоки)");
+                    lbl->setAttribute(Qt::WA_DeleteOnClose);
+                    lbl->show();
+                }, Qt::QueuedConnection);
+            });
         });
 
         connect(webInfo, &QAction::triggered, this, [=](){

@@ -135,7 +135,6 @@ reorderPairs :: [Int] -> [(Int, Int)] -> [(Int, Int)]
 reorderPairs order coords =
   let positions = IntMap.fromList (zip order [1 :: Int ..])
       normalized = [ normalize (pos i) (pos j) | (i, j) <- coords ]
+      pos v = IntMap.findWithDefault 0 v positions
+      normalize a b = if a <= b then (a, b) else (b, a)
   in Set.toList (Set.fromList normalized)
-  where
-    pos v = IntMap.findWithDefault 0 v positions
-    normalize a b = if a <= b then (a, b) else (b, a)

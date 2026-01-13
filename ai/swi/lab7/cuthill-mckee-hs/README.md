@@ -8,6 +8,22 @@
 
 ## Сборка и запуск
 
+### Вариант через GHC (без Cabal)
+
+Сборка:
+
+```bash
+ghc -i./src -i./app app/Main.hs -o cuthill-mckee-hs
+```
+
+Запуск:
+
+```bash
+./cuthill-mckee-hs --input sample/matrix.coo --format coo --algorithm all
+```
+
+### Вариант через Cabal
+
 ```bash
 cabal build
 ```

@@ -1,0 +1,38 @@
+cabal-version:       2.4
+name:                cuthill-mckee-hs
+version:             0.1.0.0
+synopsis:            Cuthill-McKee ordering algorithms
+license:             MIT
+license-file:        LICENSE
+author:              Generated
+build-type:          Simple
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     CuthillMcKee
+                     , Graph
+                     , Metrics
+  build-depends:       base >=4.14 && <5
+                     , containers
+  default-language:    Haskell2010
+
+executable cuthill-mckee-hs
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  build-depends:       base >=4.14 && <5
+                     , containers
+                     , optparse-applicative
+                     , cuthill-mckee-hs
+  default-language:    Haskell2010
+
+
+test-suite cuthill-mckee-tests
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base >=4.14 && <5
+                     , containers
+                     , tasty
+                     , tasty-hunit
+                     , cuthill-mckee-hs
+  default-language:    Haskell2010

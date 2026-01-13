@@ -1,7 +1,7 @@
 cabal-version:       2.4
 name:                cuthill-mckee-hs
 version:             0.1.0.0
-synopsis:            Cuthill-McKee ordering algorithms
+synopsis:            Cuthill-McKee ordering algorithms for matrix structure
 license:             MIT
 license-file:        LICENSE
 author:              Generated
@@ -10,7 +10,7 @@ build-type:          Simple
 library
   hs-source-dirs:      src
   exposed-modules:     CuthillMcKee
-                     , Graph
+                     , Matrix
                      , Metrics
   build-depends:       base >=4.14 && <5
                      , containers

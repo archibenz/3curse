@@ -4,7 +4,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Data.Set as Set
 import CuthillMcKee
-import Graph
+import Matrix
 import Metrics
 
 main :: IO ()
@@ -17,8 +17,8 @@ tests = testGroup "Cuthill-McKee"
   , testCase "bandwidth values" testBandwidth
   ]
 
-sampleGraph :: Graph
-sampleGraph = buildGraph 10
+sampleMatrix :: MatrixStruct
+sampleMatrix = buildMatrix 10
   [ (1,6)
   , (1,8)
   , (2,5)
@@ -38,10 +38,10 @@ assertPermutation n order = do
 
 testPermutations :: Assertion
 testPermutations = do
-  let n = vertexCount sampleGraph
-      cm = cmOrdering sampleGraph
-      icm = icmOrdering sampleGraph
-      rcm = rcmOrdering sampleGraph
+  let n = matrixSize sampleMatrix
+      cm = cmOrder (adjacency sampleMatrix)
+      icm = icmOrder (adjacency sampleMatrix)
+      rcm = rcmOrder (adjacency sampleMatrix)
   assertPermutation n cm
   assertPermutation n icm
   assertPermutation n rcm
@@ -49,19 +49,21 @@ testPermutations = do
 
 testRcmReverse :: Assertion
 testRcmReverse = do
-  let icm = icmOrdering sampleGraph
-      rcm = rcmOrdering sampleGraph
+  let icm = icmOrder (adjacency sampleMatrix)
+      rcm = rcmOrder (adjacency sampleMatrix)
   rcm @?= reverse icm
 
 
 testBandwidth :: Assertion
 testBandwidth = do
-  let cm = cmOrdering sampleGraph
-      icm = icmOrdering sampleGraph
-      rcm = rcmOrdering sampleGraph
-      bwCm = bandwidth (edges sampleGraph) cm
-      bwIcm = bandwidth (edges sampleGraph) icm
-      bwRcm = bandwidth (edges sampleGraph) rcm
+  let cm = cmOrder (adjacency sampleMatrix)
+      icm = icmOrder (adjacency sampleMatrix)
+      rcm = rcmOrder (adjacency sampleMatrix)
+      pairs = structurePairs sampleMatrix
+      n = matrixSize sampleMatrix
+      bwCm = bandwidthFromStructure n pairs cm
+      bwIcm = bandwidthFromStructure n pairs icm
+      bwRcm = bandwidthFromStructure n pairs rcm
   bwCm @?= 3
   bwIcm @?= 2
   bwRcm @?= 2

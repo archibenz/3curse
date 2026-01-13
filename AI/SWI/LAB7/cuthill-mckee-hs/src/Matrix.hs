@@ -72,8 +72,12 @@ parseCoo ls =
         _ -> error "Invalid COO header"
   where
     collect acc line =
-      case map read (words line) of
-        [i, j, val] -> if (val :: Double) == 0 then acc else (i, j) : acc
+      case words line of
+        [iStr, jStr, valStr] ->
+          let i = read iStr :: Int
+              j = read jStr :: Int
+              val = read valStr :: Double
+          in if val == 0 then acc else (i, j) : acc
         _ -> error "Invalid COO line"
 
 parseDense :: [String] -> IO MatrixStruct

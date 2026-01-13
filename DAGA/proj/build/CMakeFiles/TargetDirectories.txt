@@ -1,0 +1,4 @@
+/Users/alexander/Documents/Education/3curse/DAGA/proj/build/CMakeFiles/maze_gui.dir
+/Users/alexander/Documents/Education/3curse/DAGA/proj/build/CMakeFiles/edit_cache.dir
+/Users/alexander/Documents/Education/3curse/DAGA/proj/build/CMakeFiles/rebuild_cache.dir
+/Users/alexander/Documents/Education/3curse/DAGA/proj/build/CMakeFiles/maze_gui_autogen.dir

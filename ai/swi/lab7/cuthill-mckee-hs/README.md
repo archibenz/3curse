@@ -15,7 +15,7 @@ cabal build
 Запуск:
 
 ```bash
-cabal run -- --input sample/matrix.coo --format coo --algorithm all
+cabal run cuthill-mckee-hs -- --input sample/matrix.coo --format coo --algorithm all
 ```
 
 Дополнительные флаги:
@@ -81,7 +81,7 @@ row2 (n чисел)
 ## Пример
 
 ```bash
-cabal run -- --input sample/matrix.coo --format coo --algorithm all
+cabal run cuthill-mckee-hs -- --input sample/matrix.coo --format coo --algorithm all
 ```
 
 Пример вывода:

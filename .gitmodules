@@ -1,0 +1,3 @@
+[submodule "STUDVESNA/locator-tracker"]
+	path = STUDVESNA/locator-tracker
+	url = https://github.com/MorozovMisha/locator-tracker.git

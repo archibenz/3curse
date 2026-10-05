@@ -1,66 +1,523 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Maze Web</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Generator — DAGA Project</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header class="header">
-    <div class="logo">Maze Web</div>
-    <nav class="nav">
-      <button data-tab="build" class="active">Построение</button>
-      <button data-tab="desc">Описание</button>
-      <button data-tab="graphs">Графики</button>
-      <button data-tab="web">Web</button>
-    </nav>
-  </header>
+    <div class="app">
+        <!-- Animated Background -->
+        <div class="bg-grid"></div>
+        <div class="bg-glow glow-1"></div>
+        <div class="bg-glow glow-2"></div>
+        
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+                    <rect x="2" y="2" width="28" height="28" rx="4" stroke="currentColor" stroke-width="2"/>
+                    <path d="M8 8h4v4H8zM14 8h4v4h-4zM20 8h4v4h-4zM8 14h4v4H8zM20 14h4v4h-4zM8 20h4v4H8zM14 20h4v4h-4zM20 20h4v4h-4z" fill="currentColor" opacity="0.6"/>
+                    <path d="M10 10L22 22M10 22L22 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+                </svg>
+                <span class="logo-text">Maze<span class="logo-accent">Gen</span></span>
+            </div>
+            <nav class="nav">
+                <button class="nav-btn active" data-tab="generate">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+                    </svg>
+                    Генерация
+                </button>
+                <button class="nav-btn" data-tab="export">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    Экспорт
+                </button>
+                <button class="nav-btn" data-tab="benchmarks">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10M12 20V4M6 20v-6"/>
+                    </svg>
+                    Бенчмарки
+                </button>
+                <button class="nav-btn" data-tab="about">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                    О проекте
+                </button>
+            </nav>
+        </header>
 
-  <main class="content">
-    <section id="build" class="tab active">
-      <div class="panel">
-        <h2>Построение лабиринтов</h2>
-        <p>Демо-режим показывает генерацию и анимацию пути (данные приходят с Java backend).</p>
-        <div class="actions">
-          <button id="btnGenerate">Сгенерировать</button>
-          <button id="btnAnimate">Анимировать путь</button>
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Generate Tab -->
+            <section class="tab active" id="generate">
+                <div class="tab-grid">
+                    <!-- Controls Panel -->
+                    <div class="panel controls-panel">
+                        <h2 class="panel-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                            </svg>
+                            Параметры
+                        </h2>
+                        
+                        <div class="control-group">
+                            <label class="control-label">Алгоритм генерации</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="algorithm" value="classic" checked>
+                                    <span class="radio-check"></span>
+                                    <span class="radio-label">
+                                        <strong>Классический</strong>
+                                        <small>DFS-Backtracking, идеальный лабиринт</small>
+                                    </span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="algorithm" value="imperfect">
+                                    <span class="radio-check"></span>
+                                    <span class="radio-label">
+                                        <strong>Неидеальный</strong>
+                                        <small>С дополнительными проходами</small>
+                                    </span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="algorithm" value="multithread">
+                                    <span class="radio-check"></span>
+                                    <span class="radio-label">
+                                        <strong>Многопоточный</strong>
+                                        <small>Синхронизированная генерация</small>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="control-row">
+                            <div class="control-group">
+                                <label class="control-label" for="mazeWidth">Ширина</label>
+                                <input type="number" id="mazeWidth" value="20" min="5" max="100" class="input-field">
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="mazeHeight">Высота</label>
+                                <input type="number" id="mazeHeight" value="20" min="5" max="100" class="input-field">
+                            </div>
+                        </div>
+                        
+                        <div class="control-group algo-option" id="threadsOption" style="display: none;">
+                            <label class="control-label" for="threads">Количество потоков</label>
+                            <input type="range" id="threads" value="4" min="2" max="16" class="range-slider">
+                            <div class="range-value"><span id="threadsValue">4</span> потоков</div>
+                        </div>
+                        
+                        <div class="control-group algo-option" id="loopsOption" style="display: none;">
+                            <label class="control-label" for="extraLoops">Дополнительные проходы</label>
+                            <input type="range" id="extraLoops" value="10" min="0" max="50" class="range-slider">
+                            <div class="range-value"><span id="loopsValue">10</span> проходов</div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label class="control-label" for="exits">Количество выходов</label>
+                            <input type="range" id="exits" value="1" min="1" max="8" class="range-slider">
+                            <div class="range-value"><span id="exitsValue">1</span> выход(ов)</div>
+                        </div>
+                        
+                        <div class="control-group checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="showPath" checked>
+                                <span class="checkbox-check"></span>
+                                Показывать путь
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="animatePath" checked>
+                                <span class="checkbox-check"></span>
+                                Анимировать путь
+                            </label>
+                        </div>
+                        
+                        <button class="btn btn-primary btn-generate" id="btnGenerate">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                            Сгенерировать
+                        </button>
+                        
+                        <div class="stats" id="stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Время генерации</span>
+                                <span class="stat-value" id="genTime">—</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Размер</span>
+                                <span class="stat-value" id="mazeSize">—</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Длина пути</span>
+                                <span class="stat-value" id="pathLength">—</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Maze Display -->
+                    <div class="panel maze-panel">
+                        <div class="maze-header">
+                            <h2 class="panel-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <path d="M3 9h18M9 21V9"/>
+                                </svg>
+                                Лабиринт
+                            </h2>
+                            <div class="maze-controls">
+                                <button class="icon-btn" id="btnZoomIn" title="Увеличить">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/>
+                                    </svg>
+                                </button>
+                                <button class="icon-btn" id="btnZoomOut" title="Уменьшить">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M8 11h6"/>
+                                    </svg>
+                                </button>
+                                <button class="icon-btn" id="btnReset" title="Сбросить">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/>
+                                        <path d="M3 3v5h5"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="maze-container" id="mazeContainer">
+                            <canvas id="mazeCanvas"></canvas>
+                            <div class="maze-placeholder" id="mazePlaceholder">
+                                <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <rect x="8" y="8" width="48" height="48" rx="4"/>
+                                    <path d="M8 20h48M8 32h48M8 44h48M20 8v48M32 8v48M44 8v48"/>
+                                </svg>
+                                <p>Нажмите «Сгенерировать» для создания лабиринта</p>
+                            </div>
+                        </div>
+                        <div class="legend">
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: rgba(70, 200, 120, 0.6)"></span>
+                                Старт
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: rgba(220, 80, 80, 0.6)"></span>
+                                Выход
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #5dd4ff"></span>
+                                Путь
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Export Tab -->
+            <section class="tab" id="export">
+                <div class="tab-grid export-grid">
+                    <div class="panel">
+                        <h2 class="panel-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                            Экспорт для разработки
+                        </h2>
+                        <p class="panel-desc">Экспортируйте лабиринт в различных форматах для использования в проектах робототехники и симуляторах.</p>
+                        
+                        <div class="export-formats">
+                            <div class="format-card" data-format="png">
+                                <div class="format-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                        <path d="M21 15l-5-5L5 21"/>
+                                    </svg>
+                                </div>
+                                <div class="format-info">
+                                    <h3>PNG</h3>
+                                    <p>Растровое изображение с прозрачностью. Идеально для визуализации.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="format-card" data-format="jpeg">
+                                <div class="format-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                        <path d="M21 15l-5-5L5 21"/>
+                                    </svg>
+                                </div>
+                                <div class="format-info">
+                                    <h3>JPEG</h3>
+                                    <p>Сжатое изображение. Подходит для печати и документации.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="format-card" data-format="svg">
+                                <div class="format-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                    </svg>
+                                </div>
+                                <div class="format-info">
+                                    <h3>SVG</h3>
+                                    <p>Векторная графика. Масштабируется без потери качества.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="format-card" data-format="json">
+                                <div class="format-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                        <path d="M14 2v6h6M8 13h2M8 17h2M14 13h2M14 17h2"/>
+                                    </svg>
+                                </div>
+                                <div class="format-info">
+                                    <h3>JSON</h3>
+                                    <p>Структурированные данные. Для программной обработки и роботов.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel">
+                        <h2 class="panel-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                            </svg>
+                            Настройки экспорта
+                        </h2>
+                        
+                        <div class="control-group">
+                            <label class="control-label" for="cellSize">Размер ячейки (px)</label>
+                            <input type="range" id="cellSize" value="20" min="10" max="50" class="range-slider">
+                            <div class="range-value"><span id="cellSizeValue">20</span> px</div>
+                        </div>
+                        
+                        <div class="control-group checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="exportShowPath" checked>
+                                <span class="checkbox-check"></span>
+                                Включить путь
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="exportShowGrid" checked>
+                                <span class="checkbox-check"></span>
+                                Показать сетку
+                            </label>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label class="control-label">Цвет стен</label>
+                            <div class="color-picker-row">
+                                <input type="color" id="wallColor" value="#ffffff" class="color-input">
+                                <input type="text" id="wallColorText" value="#FFFFFF" class="input-field color-text">
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label class="control-label">Цвет фона</label>
+                            <div class="color-picker-row">
+                                <input type="color" id="bgColor" value="#1a1a2e" class="color-input">
+                                <input type="text" id="bgColorText" value="#1a1a2e" class="input-field color-text">
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label class="control-label">Цвет пути</label>
+                            <div class="color-picker-row">
+                                <input type="color" id="pathColorExport" value="#5dd4ff" class="color-input">
+                                <input type="text" id="pathColorText" value="#5dd4ff" class="input-field color-text">
+                            </div>
+                        </div>
+                        
+                        <div class="export-preview" id="exportPreview">
+                            <p class="preview-placeholder">Сначала сгенерируйте лабиринт</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Benchmarks Tab -->
+            <section class="tab" id="benchmarks">
+                <div class="tab-grid">
+                    <div class="panel">
+                        <h2 class="panel-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 20V10M12 20V4M6 20v-6"/>
+                            </svg>
+                            Сравнение производительности
+                        </h2>
+                        <p class="panel-desc">Сравните скорость генерации лабиринтов с разным количеством потоков.</p>
+                        
+                        <button class="btn btn-primary" id="btnRunBenchmark">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                            Запустить тест
+                        </button>
+                        
+                        <div class="benchmark-results" id="benchmarkResults">
+                            <canvas id="benchmarkCanvas" width="700" height="350"></canvas>
+                        </div>
+                        
+                        <div class="benchmark-legend">
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #5dd4ff"></span>
+                                Синхронизированные потоки
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #f5b041"></span>
+                                Независимые потоки
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel">
+                        <h2 class="panel-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 16v-4M12 8h.01"/>
+                            </svg>
+                            Информация о тестах
+                        </h2>
+                        
+                        <div class="info-cards">
+                            <div class="info-card">
+                                <h4>Синхронизированные потоки</h4>
+                                <p>Потоки работают на общей структуре данных с использованием барьеров синхронизации. Это позволяет генерировать один большой лабиринт параллельно.</p>
+                            </div>
+                            <div class="info-card">
+                                <h4>Независимые потоки</h4>
+                                <p>Каждый поток генерирует свой собственный небольшой лабиринт. Нет накладных расходов на синхронизацию, но результат — несколько маленьких лабиринтов.</p>
+                            </div>
+                            <div class="info-card">
+                                <h4>Параметры теста</h4>
+                                <ul>
+                                    <li>Размер лабиринта: 30×30</li>
+                                    <li>Количество прогонов: 3</li>
+                                    <li>Потоки: 1, 2, 4, 6, 8</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- About Tab -->
+            <section class="tab" id="about">
+                <div class="about-content">
+                    <div class="panel about-hero">
+                        <div class="about-hero-content">
+                            <h1>Maze Generator</h1>
+                            <p class="tagline">Многопоточная генерация лабиринтов с визуализацией</p>
+                            <div class="project-badge">DAGA Project — 4 семестр</div>
+                        </div>
+                    </div>
+                    
+                    <div class="about-grid">
+                        <div class="panel about-card">
+                            <div class="about-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                            </div>
+                            <h3>DFS-Backtracking</h3>
+                            <p>Классический алгоритм генерации идеальных лабиринтов с использованием поиска в глубину и отката.</p>
+                        </div>
+                        
+                        <div class="panel about-card">
+                            <div class="about-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                                </svg>
+                            </div>
+                            <h3>Многопоточность</h3>
+                            <p>Параллельная генерация с несколькими потоками, использующими барьеры синхронизации для координации.</p>
+                        </div>
+                        
+                        <div class="panel about-card">
+                            <div class="about-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                            </div>
+                            <h3>BFS Поиск</h3>
+                            <p>Поиск в ширину гарантирует нахождение кратчайшего пути от старта до выхода.</p>
+                        </div>
+                        
+                        <div class="panel about-card">
+                            <div class="about-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </div>
+                            <h3>Экспорт</h3>
+                            <p>Экспортируйте лабиринты в PNG, JPEG, SVG или JSON для использования в робототехнике.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="panel about-tech">
+                        <h3>Технологии</h3>
+                        <div class="tech-stack">
+                            <div class="tech-item">
+                                <span class="tech-name">C++17</span>
+                                <span class="tech-desc">Основное приложение</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-name">Qt 6</span>
+                                <span class="tech-desc">GUI интерфейс</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-name">Java</span>
+                                <span class="tech-desc">Web-сервер</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-name">Canvas API</span>
+                                <span class="tech-desc">Визуализация</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner">
+                <svg viewBox="0 0 50 50">
+                    <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <p>Генерация...</p>
         </div>
-      </div>
-      <div class="panel">
-        <canvas id="mazeCanvas" width="600" height="600"></canvas>
-      </div>
-    </section>
-
-    <section id="desc" class="tab">
-      <div class="panel">
-        <h2>Описание</h2>
-        <ul>
-          <li><strong>Построение:</strong> DFS-Backtracking с разбиением на потоки.</li>
-          <li><strong>Поиск пути:</strong> BFS, гарантирует кратчайший путь.</li>
-          <li><strong>Синхронизация:</strong> локальные и глобальные барьеры.</li>
-        </ul>
-      </div>
-    </section>
-
-    <section id="graphs" class="tab">
-      <div class="panel">
-        <h2>Графики производительности</h2>
-        <button id="btnBench">Обновить график</button>
-        <canvas id="graphCanvas" width="700" height="320"></canvas>
-      </div>
-    </section>
-
-    <section id="web" class="tab">
-      <div class="panel">
-        <h2>Web-интеграция</h2>
-        <p>Backend: Java HttpServer. Frontend: статический HTML/CSS/JS.</p>
-        <p>Запуск: <code>javac src/Main.java</code> и <code>java Main</code> из каталога <code>web/backend</code>.</p>
-        <p>Затем открыть <code>http://localhost:8080</code>.</p>
-      </div>
-    </section>
-  </main>
-
-  <script src="app.js"></script>
+        
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+    
+    <script src="app.js"></script>
 </body>
 </html>

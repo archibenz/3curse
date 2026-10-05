@@ -1,0 +1,16 @@
+.next/
+node_modules/
+.turbo/
+dist/
+out/
+coverage/
+.DS_Store
+*.log
+apps/api/build/
+apps/api/.gradle/
+apps/api/gradle-app.setting
+apps/api/gradle/
+*.iml
+*.class
+/.idea/
+/.vscode/

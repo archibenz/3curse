@@ -1,0 +1,16 @@
+{
+  "name": "reinasleo-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace apps/web run dev",
+    "build:web": "npm --workspace apps/web run build",
+    "lint:web": "npm --workspace apps/web run lint"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}

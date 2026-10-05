@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Метод глобального сопоставления элементов веб-страницы</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --accent: #3b82f6;
+    --accent2: #8b5cf6;
+    --accent3: #06b6d4;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --success: #22c55e;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --code-bg: #0d1117;
+    --border: #334155;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .slide {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 50px 60px;
+    position: relative;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .slide.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .slide-number {
+    position: fixed;
+    bottom: 20px;
+    right: 30px;
+    font-size: 14px;
+    color: var(--muted);
+    z-index: 100;
+  }
+
+  .progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.3s ease;
+    z-index: 100;
+  }
+
+  h1 {
+    font-size: 2.6em;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, var(--text), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+  }
+
+  h2 {
+    font-size: 2em;
+    font-weight: 600;
+    margin-bottom: 30px;
+    color: var(--accent3);
+    text-align: left;
+    width: 100%;
+    max-width: 1400px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 12px;
+  }
+
+  h3 {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 16px 0 8px;
+  }
+
+  .content {
+    width: 100%;
+    max-width: 1400px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  p, li {
+    font-size: 1.15em;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  ul { list-style: none; padding: 0; }
+
+  ul li {
+    padding: 6px 0 6px 28px;
+    position: relative;
+  }
+
+  ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 1.3em;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  .author {
+    font-size: 1.1em;
+    color: var(--muted);
+    margin-top: 40px;
+    text-align: center;
+  }
+
+  .conference {
+    font-size: 0.95em;
+    color: var(--accent);
+    margin-top: 8px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    width: 100%;
+    max-width: 1400px;
+  }
+
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    width: 100%;
+    max-width: 1400px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    transition: transform 0.2s;
+  }
+
+  .card:hover { transform: translateY(-2px); }
+
+  .card-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--accent3);
+    margin-bottom: 10px;
+  }
+
+  .card p { font-size: 1.05em; color: var(--muted); line-height: 1.5; }
+
+  code, .code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 0.95em;
+    line-height: 1.6;
+    display: block;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--muted);
+    width: 100%;
+    max-width: 1400px;
+  }
+
+  code .kw { color: #c678dd; }
+  code .fn { color: #61afef; }
+  code .str { color: #98c379; }
+  code .num { color: #d19a66; }
+  code .cm { color: #5c6370; font-style: italic; }
+  code .op { color: #56b6c2; }
+
+  .highlight {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .formula {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 24px 32px;
+    text-align: center;
+    font-size: 1.2em;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    color: var(--text);
+    margin: 20px auto;
+    max-width: 900px;
+    letter-spacing: 0.5px;
+  }
+
+  .formula .var { color: var(--accent3); font-style: italic; }
+  .formula .weight { color: var(--warn); }
+
+  table {
+    width: 100%;
+    max-width: 1400px;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.95em;
+  }
+
+  th {
+    background: var(--surface);
+    color: var(--accent3);
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  tr:hover td { background: rgba(59, 130, 246, 0.05); }
+
+  .bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 1400px;
+  }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .bar-label {
+    width: 80px;
+    font-size: 0.9em;
+    color: var(--muted);
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .bar-track {
+    flex: 1;
+    height: 28px;
+    background: var(--surface);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: white;
+    transition: width 0.8s ease;
+  }
+
+  .bar-old {
+    position: absolute;
+    height: 100%;
+    background: rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    border-right: 2px dashed var(--danger);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 600;
+  }
+
+  .badge-green { background: rgba(34,197,94,0.2); color: var(--success); }
+  .badge-blue { background: rgba(59,130,246,0.2); color: var(--accent); }
+  .badge-purple { background: rgba(139,92,246,0.2); color: var(--accent2); }
+
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+    max-width: 1400px;
+    margin: 20px 0;
+  }
+
+  .pipe-step {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px 18px;
+    text-align: center;
+    font-size: 1.05em;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .pipe-step:first-child { border-radius: 10px 0 0 10px; }
+  .pipe-step:last-child { border-radius: 0 10px 10px 0; }
+
+  .pipe-step .pipe-title {
+    font-weight: 700;
+    color: var(--accent3);
+    font-size: 1.25em;
+    margin-bottom: 8px;
+  }
+
+  .pipe-step .pipe-desc { color: var(--muted); font-size: 1.05em; line-height: 1.4; }
+
+  .pipe-arrow {
+    width: 0;
+    height: 0;
+    border-left: 16px solid var(--accent);
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    flex-shrink: 0;
+    margin: 0 -1px;
+    z-index: 1;
+    align-self: center;
+  }
+
+  .diagram-box {
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: 10px;
+    padding: 16px 20px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--accent3);
+  }
+
+  .matrix-grid {
+    display: grid;
+    gap: 2px;
+    background: var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 16px auto;
+    max-width: 500px;
+  }
+
+  .matrix-cell {
+    padding: 8px;
+    text-align: center;
+    font-size: 0.95em;
+    font-weight: 500;
+  }
+
+  .matrix-header {
+    background: var(--surface);
+    color: var(--accent3);
+    font-weight: 600;
+  }
+
+  .weight-bar {
+    display: flex;
+    height: 48px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 16px 0;
+    max-width: 1400px;
+    width: 100%;
+  }
+
+  .weight-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: white;
+    transition: flex 0.5s;
+    white-space: nowrap;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .key-point {
+    background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 12px 0;
+    font-size: 1em;
+  }
+
+  .nav-hint {
+    position: fixed;
+    bottom: 20px;
+    left: 30px;
+    font-size: 12px;
+    color: var(--border);
+    z-index: 100;
+  }
+
+  .tag { color: var(--accent3); font-weight: 600; }
+  .em { color: var(--warn); font-weight: 600; }
+  .green { color: var(--success); }
+  .red { color: var(--danger); }
+
+  .flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .stat-big {
+    font-size: 3.5em;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 1em;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .bipartite-demo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 80px;
+    margin: 20px 0;
+  }
+
+  .bp-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .bp-node {
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.95em;
+    text-align: center;
+    min-width: 120px;
+  }
+
+  .bp-node.right { border-color: var(--accent2); }
+  .bp-node.matched { border-color: var(--success); background: rgba(34,197,94,0.1); }
+
+  .bp-lines {
+    position: relative;
+    width: 80px;
+  }
+
+  svg.bp-svg {
+    position: absolute;
+    top: -60px;
+    left: -40px;
+    width: 160px;
+    height: 300px;
+  }
+
+  .scenario-before, .scenario-after {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
+  }
+
+  .scenario-before { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); }
+  .scenario-after { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress"></div>
+<div class="slide-number" id="slideNum"></div>
+<div class="nav-hint">← → навигация | пробел — вперед</div>
+
+<!-- ============ SLIDE 1: Title ============ -->
+<div class="slide active" id="s1">
+  <h1>Метод глобального сопоставления<br>элементов веб-страницы для автоматизированного<br>выявления регрессионных изменений интерфейса</h1>
+  <p class="subtitle">Автоматизация обнаружения UI-регрессий с использованием<br>взвешенного многофакторного анализа и алгоритма Венгера</p>
+  <p class="author">Коломиец А. Р., Морозов М. А., Славим А. В.</p>
+  <p class="conference">Студвесна 2026</p>
+</div>
+
+<!-- ============ SLIDE 2: Problem ============ -->
+<div class="slide" id="s2">
+  <h2>Актуальность проблемы</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Проблема</h3>
+        <ul>
+          <li>Веб-приложения обновляются <span class="highlight">ежедневно</span> — UI меняется быстрее, чем тесты</li>
+          <li>Ручная проверка регрессий — трудоемка и ненадежна</li>
+          <li>Попиксельное сравнение скриншотов дает <span class="em">ложные срабатывания</span> при любом сдвиге</li>
+          <li>Существующие подходы не учитывают <span class="highlight">семантику</span> элементов</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Последствия</h3>
+        <ul>
+          <li>До <span class="em">40%</span> времени QA уходит на поддержку сломанных селекторов</li>
+          <li>Пропущенные регрессии — дефекты в продакшене</li>
+          <li>Хрупкие тесты (flaky tests) снижают доверие к автоматизации</li>
+          <li>Масштабирование ручного подхода — невозможно</li>
+        </ul>
+      </div>
+    </div>
+    <div class="key-point" style="margin-top: 30px;">
+      <strong>Цель:</strong> разработать метод, который автоматически определяет, какие элементы интерфейса изменились между версиями, с высокой точностью и объяснимостью результатов.
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 3: Existing approaches ============ -->
+<div class="slide" id="s3">
+  <h2>Существующие подходы и ограничения</h2>
+  <div class="content">
+    <table>
+      <thead>
+        <tr>
+          <th>Подход</th>
+          <th>Принцип</th>
+          <th>Ограничения</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag">Попиксельное сравнение</span></td>
+          <td>Побитовая разница скриншотов</td>
+          <td>Ложные срабатывания при рендеринге шрифтов, динамическом контенте</td>
+        </tr>
+        <tr>
+          <td><span class="tag">DOM-diff (tree edit distance)</span></td>
+          <td>Расстояние редактирования деревьев</td>
+          <td>O(n^3) сложность, не учитывает визуальный контекст</td>
+        </tr>
+        <tr>
+          <td><span class="tag">Локальный жадный поиск</span></td>
+          <td>Greedy matching ближайших элементов</td>
+          <td>Неустойчив при перестановках, каскадные ошибки</td>
+        </tr>
+        <tr>
+          <td><span class="tag">CSS-селекторы</span></td>
+          <td>Сопоставление по пути в DOM</td>
+          <td>Хрупкие при рефакторинге разметки</td>
+        </tr>
+        <tr>
+          <td><span class="tag">ML-подходы (CNN)</span></td>
+          <td>Обучение на парах скриншотов</td>
+          <td>Требуют больших датасетов, black-box, низкая интерпретируемость</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="key-point" style="margin-top: 20px;">
+      <strong>Ключевой недостаток:</strong> существующие методы либо не учитывают многофакторную природу UI-элементов, либо используют локальный жадный поиск, который дает неоптимальные сопоставления при перестановках элементов.
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 4: Method overview ============ -->
+<div class="slide" id="s4">
+  <h2>Обзор предложенного метода</h2>
+  <div class="content">
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-title">1. Извлечение</div>
+        <div class="pipe-desc">DOM + BBox +<br>атрибуты</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-title">2. Векторизация</div>
+        <div class="pipe-desc">5 факторов<br>признаков</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-title">3. Матрица стоимости</div>
+        <div class="pipe-desc">Взвешенная<br>оценка пар</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-title">4. Венгерский алгоритм</div>
+        <div class="pipe-desc">Глобальное<br>сопоставление</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-title">5. Калибровка</div>
+        <div class="pipe-desc">F1-порог +<br>уверенность</div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-top: 30px;">
+      <div class="card">
+        <div class="card-title">Вход</div>
+        <p>Два состояния веб-страницы: <strong>baseline</strong> (эталон) и <strong>current</strong> (текущая версия). Для каждого элемента извлекается вектор из 5 групп признаков.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Выход</div>
+        <p>Список изменений с типами: <strong>SELECTOR_CHANGE</strong>, <strong>CONTENT_CHANGE</strong>, <strong>REMOVED</strong>, <strong>ADDED</strong> — каждое с оценкой уверенности и рекомендуемым действием.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 5: Feature extraction ============ -->
+<div class="slide" id="s5">
+  <h2>Извлечение признаков элементов</h2>
+  <div class="content">
+    <p style="margin-bottom: 20px;">Каждый интерактивный элемент DOM представляется вектором <span class="tag">VectorFingerprint</span> из 5 групп признаков:</p>
+
+    <div class="three-col">
+      <div class="card">
+        <div class="card-title">Текст (w = 0.32)</div>
+        <p>Видимый текст элемента. Fuzzy-сравнение: Levenshtein + N-gram. Детекция динамического контента (даты, числа, валюты).</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Атрибуты (w = 0.32)</div>
+        <p>data-testid, id, class, aria-*, role. Иерархия весов: приоритет тестовым атрибутам. Fuzzy matching для классов.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Структура (w = 0.18)</div>
+        <p>Тег родителя, глубина вложенности, индекс среди соседей, текст предшествующего элемента.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Тег (w = 0.12)</div>
+        <p>Тип HTML-элемента с учетом семантической близости: BUTTON ~ A, SPAN ~ DIV, INPUT ~ TEXTAREA.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Геометрия (w = 0.06)</div>
+        <p>Bounding box, площадь относительно viewport. Толерантность 20% для адаптивного дизайна.</p>
+      </div>
+    </div>
+
+    <div class="weight-bar" style="margin-top: 24px;">
+      <div class="weight-segment" style="flex: 28; background: #3b82f6;">Текст 0.32</div>
+      <div class="weight-segment" style="flex: 28; background: #8b5cf6;">Атрибуты 0.32</div>
+      <div class="weight-segment" style="flex: 18; background: #06b6d4;">Структура 0.18</div>
+      <div class="weight-segment" style="flex: 14; background: #f59e0b;">Тег 0.12</div>
+      <div class="weight-segment" style="flex: 12; background: #22c55e;">Размер 0.06</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 6: Text similarity ============ -->
+<div class="slide" id="s6">
+  <h2>Текстовое сходство элементов</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Три стратегии сравнения</h3>
+        <ul>
+          <li><span class="tag">Levenshtein distance</span> — для строк > 20 символов, нормализованное расстояние редактирования</li>
+          <li><span class="tag">N-gram similarity</span> — для коротких строк (&#8804; 20 символов), коэффициент Жаккара по биграммам</li>
+          <li><span class="tag">Детекция динамического контента</span> — даты, числа, валюты автоматически получают score = 0.85</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Комбинирование</h3>
+        <p>Для коротких строк: среднее Levenshtein и N-gram. Это повышает устойчивость к мелким изменениям.</p>
+      </div>
+      <div>
+        <h3>Примеры</h3>
+        <table>
+          <thead>
+            <tr><th>Baseline</th><th>Current</th><th>Score</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>"Войти"</td><td>"Войти"</td><td><span class="green">1.00</span></td></tr>
+            <tr><td>"Click Here"</td><td>"Click Now"</td><td><span class="green">0.92</span></td></tr>
+            <tr><td>"Отправить"</td><td>"Завершить"</td><td><span class="red">0.40</span></td></tr>
+            <tr><td>"15.03.2026"</td><td>"16.03.2026"</td><td><span class="green">0.85</span></td></tr>
+            <tr><td>"$100.50"</td><td>"$215.30"</td><td><span class="green">0.85</span></td></tr>
+          </tbody>
+        </table>
+        <div class="key-point" style="margin-top: 16px;">
+          Динамический контент (даты, цены) не должен вызывать ложных срабатываний.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 7: Attributes ============ -->
+<div class="slide" id="s7">
+  <h2>Сопоставление атрибутов</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Иерархия весов атрибутов</h3>
+        <div class="bar-chart">
+          <div class="bar-row">
+            <span class="bar-label">data-testid</span>
+            <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent);">0.25</div></div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">data-cy</span>
+            <div class="bar-track"><div class="bar-fill" style="width:92%;background:var(--accent);">0.23</div></div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">data-test</span>
+            <div class="bar-track"><div class="bar-fill" style="width:80%;background:var(--accent2);">0.20</div></div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">id</span>
+            <div class="bar-track"><div class="bar-fill" style="width:60%;background:var(--accent2);">0.15</div></div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">name</span>
+            <div class="bar-track"><div class="bar-fill" style="width:48%;background:var(--accent3);">0.12</div></div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">aria-label</span>
+            <div class="bar-track"><div class="bar-fill" style="width:40%;background:var(--accent3);">0.10</div></div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">role</span>
+            <div class="bar-track"><div class="bar-fill" style="width:32%;background:#64748b;">0.08</div></div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">class</span>
+            <div class="bar-track"><div class="bar-fill" style="width:32%;background:#64748b;">0.08</div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>Принцип</h3>
+        <ul>
+          <li>Тестовые атрибуты (<span class="tag">data-testid</span>) — наиболее стабильны, получают максимальный вес</li>
+          <li>CSS-классы — часто меняются при рефакторинге, поэтому используется <span class="highlight">fuzzy matching</span></li>
+          <li>Для каждого атрибута: точное или нечеткое сравнение, взвешенное по надежности</li>
+        </ul>
+
+        <h3 style="margin-top: 16px;">Fuzzy class matching</h3>
+        <p style="font-size: 0.95em; color: var(--muted);">
+          Классы разбиваются по разделителям (<code style="display:inline;padding:2px 6px;font-size:0.9em;">-</code>, <code style="display:inline;padding:2px 6px;font-size:0.9em;">_</code>), затем применяется нечеткое сравнение частей:
+        </p>
+        <p style="font-size: 0.95em; margin-top: 8px;">
+          <code style="display:inline;padding:2px 6px;font-size:0.9em;">btn-primary</code> vs <code style="display:inline;padding:2px 6px;font-size:0.9em;">btn-secondary</code> → 0.72
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 8: Scoring model ============ -->
+<div class="slide" id="s8">
+  <h2>Модель оценки сходства</h2>
+  <div class="content">
+    <div class="formula">
+      <span class="var">S</span>(<span class="var">e<sub>i</sub></span>, <span class="var">e<sub>j</sub></span>) =
+      <span class="weight">w<sub>text</sub></span> &middot; <span class="var">f<sub>text</sub></span> +
+      <span class="weight">w<sub>attr</sub></span> &middot; <span class="var">f<sub>attr</sub></span> +
+      <span class="weight">w<sub>struct</sub></span> &middot; <span class="var">f<sub>struct</sub></span> +
+      <span class="weight">w<sub>tag</sub></span> &middot; <span class="var">f<sub>tag</sub></span> +
+      <span class="weight">w<sub>size</sub></span> &middot; <span class="var">f<sub>size</sub></span>
+    </div>
+
+    <div class="two-col" style="margin-top: 20px;">
+      <div>
+        <h3>Пример расчета</h3>
+        <p style="font-size: 0.95em; margin-bottom: 12px; color: var(--muted);">
+          Baseline: <code style="display:inline;padding:2px 6px;font-size:0.85em;">&lt;button data-testid="submit"&gt;Click Here&lt;/button&gt;</code><br>
+          Current: <code style="display:inline;padding:2px 6px;font-size:0.85em;">&lt;button data-testid="submit"&gt;Click Now&lt;/button&gt;</code>
+        </p>
+        <table>
+          <thead>
+            <tr><th>Фактор</th><th>Оценка</th><th>Вес</th><th>Вклад</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Текст</td><td>0.92</td><td>0.32</td><td><strong>0.294</strong></td></tr>
+            <tr><td>Атрибуты</td><td>0.78</td><td>0.32</td><td><strong>0.250</strong></td></tr>
+            <tr><td>Структура</td><td>0.83</td><td>0.18</td><td><strong>0.150</strong></td></tr>
+            <tr><td>Тег</td><td>1.00</td><td>0.12</td><td><strong>0.120</strong></td></tr>
+            <tr><td>Размер</td><td>1.00</td><td>0.06</td><td><strong>0.060</strong></td></tr>
+            <tr style="background: rgba(34,197,94,0.1);"><td colspan="3"><strong>Итого</strong></td><td><strong class="green">0.874</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Адаптивные пороги</h3>
+        <p style="font-size: 0.95em; color: var(--muted); margin-bottom: 12px;">
+          Порог принятия решения зависит от типа элемента:
+        </p>
+        <table>
+          <thead><tr><th>Элемент</th><th>Порог</th></tr></thead>
+          <tbody>
+            <tr><td>BUTTON</td><td>0.72</td></tr>
+            <tr><td>INPUT</td><td>0.70</td></tr>
+            <tr><td>A (ссылка)</td><td>0.68</td></tr>
+            <tr><td>DIV</td><td>0.60</td></tr>
+            <tr><td>LI</td><td>0.58</td></tr>
+            <tr><td>По умолчанию</td><td>0.65</td></tr>
+          </tbody>
+        </table>
+        <div class="key-point" style="margin-top: 12px;">
+          Для кнопок требуется более высокая уверенность, чем для контейнеров.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 9: Hungarian algorithm ============ -->
+<div class="slide" id="s9">
+  <h2>Глобальное двудольное сопоставление</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Алгоритм Венгера (Куна-Манкреса)</h3>
+        <ul>
+          <li>Задача назначения: найти <span class="highlight">оптимальное</span> одно-к-одному соответствие между элементами baseline и current</li>
+          <li>Матрица стоимости: <span class="tag">C[i][j] = 1 - S(e<sub>i</sub>, e<sub>j</sub>)</span> — инвертированная оценка сходства</li>
+          <li>Сложность: <span class="em">O(n^3)</span>, где n — число элементов на странице</li>
+          <li>Практически: ~25ms для страницы с 50 элементами</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Преимущества перед жадным поиском</h3>
+        <ul>
+          <li><span class="green">Устойчивость к перестановкам</span> — элементы, поменявшие порядок, корректно сопоставляются</li>
+          <li><span class="green">Отсутствие каскадных ошибок</span> — одно неверное сопоставление не «сдвигает» остальные</li>
+          <li><span class="green">Математическая оптимальность</span> — минимизирует суммарную стоимость назначений</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Иллюстрация</h3>
+        <div style="display:flex; gap: 40px; align-items:flex-start; margin-top: 10px;">
+          <div>
+            <p style="font-size: 0.95em; color: var(--accent3); margin-bottom: 8px; text-align:center;"><strong>Baseline</strong></p>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div class="bp-node matched">Button "Войти"</div>
+              <div class="bp-node matched">Input email</div>
+              <div class="bp-node matched">Link "Помощь"</div>
+              <div class="bp-node">Div header</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:20px;justify-content:center;padding-top:30px;">
+            <div style="color:var(--success);font-size:1.2em;">&#x2194; 0.87</div>
+            <div style="color:var(--success);font-size:1.2em;">&#x2194; 0.93</div>
+            <div style="color:var(--success);font-size:1.2em;">&#x2194; 0.81</div>
+            <div style="color:var(--danger);font-size:1.2em;">&#x2718; removed</div>
+          </div>
+          <div>
+            <p style="font-size: 0.95em; color: var(--accent2); margin-bottom: 8px; text-align:center;"><strong>Current</strong></p>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div class="bp-node right matched">Input email</div>
+              <div class="bp-node right matched">Button "Логин"</div>
+              <div class="bp-node right">Div banner</div>
+              <div class="bp-node right matched">Link "Справка"</div>
+            </div>
+          </div>
+        </div>
+        <div class="key-point" style="margin-top: 16px; font-size: 0.9em;">
+          Даже при перестановке элементов, Венгерский алгоритм находит оптимальное глобальное соответствие.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 10: Container shifts ============ -->
+<div class="slide" id="s10">
+  <h2>Обнаружение смещений контейнеров</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Проблема</h3>
+        <p style="margin-bottom: 16px;">Когда контейнер сдвигается, все вложенные элементы тоже меняют координаты. Без учета этого — каждый дочерний элемент ошибочно помечается как «изменившийся».</p>
+
+        <h3>Решение: DBSCAN-кластеризация</h3>
+        <ul>
+          <li>Для каждого контейнера вычисляются смещения (dx, dy) дочерних элементов</li>
+          <li><span class="tag">DBSCAN</span> кластеризует смещения (eps = 10px)</li>
+          <li>Если &#8805; 70% детей имеют одинаковое смещение — это <span class="highlight">сдвиг контейнера</span></li>
+          <li>Минимальный порог: 3px (подавление шума)</li>
+        </ul>
+      </div>
+      <div>
+        <h3>До и после</h3>
+        <div class="scenario-before" style="margin-bottom: 12px;">
+          <strong style="color:var(--danger);">Без коррекции:</strong><br>
+          Container margin: 0 → 50px<br>
+          <span style="color:var(--danger);">Button A — CHANGED (dx=50)</span><br>
+          <span style="color:var(--danger);">Button B — CHANGED (dx=50)</span><br>
+          <span style="color:var(--danger);">Input C — CHANGED (dx=50)</span><br>
+          Итого: <strong>3 ложных срабатывания</strong>
+        </div>
+        <div class="scenario-after">
+          <strong style="color:var(--success);">С коррекцией (DBSCAN):</strong><br>
+          Кластер: {dx=50, dy=0}, 3/3 = 100%<br>
+          <span style="color:var(--success);">Container — SHIFT_DETECTED</span><br>
+          <span style="color:var(--success);">Button A — OK (offset compensated)</span><br>
+          <span style="color:var(--success);">Button B — OK</span><br>
+          Итого: <strong>0 ложных срабатываний</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 11: Confidence calibration ============ -->
+<div class="slide" id="s11">
+  <h2>Калибровка уверенности и выбор порога</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Трехуровневая калибровка</h3>
+        <table>
+          <thead>
+            <tr><th>Уровень</th><th>Score</th><th>Действие</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-green">Высокая</span></td>
+              <td>&#8805; threshold + 0.15</td>
+              <td>Автоматическое обновление селектора</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">Средняя</span></td>
+              <td>&#8805; threshold</td>
+              <td>Рекомендация обновления с пометкой для проверки</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-purple">Низкая</span></td>
+              <td>&lt; threshold</td>
+              <td>Ручной просмотр (MANUAL_REVIEW)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top: 20px;">Выбор порога по F1</h3>
+        <ul>
+          <li>Для каждого типа элемента подбирается порог, максимизирующий <span class="tag">F1-меру</span></li>
+          <li>Баланс между precision и recall: минимизация и ложных срабатываний, и пропусков</li>
+          <li>Пороги валидированы на синтетических и реальных данных</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Классификация изменений</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="card" style="border-left: 3px solid var(--danger);">
+            <div class="card-title" style="color:var(--danger);">SELECTOR_CHANGE</div>
+            <p>Селектор элемента изменился. Требуется обновление тестов.</p>
+          </div>
+          <div class="card" style="border-left: 3px solid var(--warn);">
+            <div class="card-title" style="color:var(--warn);">CONTENT_CHANGE</div>
+            <p>Содержимое изменилось, селектор тот же. Проверить ожидаемые значения.</p>
+          </div>
+          <div class="card" style="border-left: 3px solid var(--accent2);">
+            <div class="card-title" style="color:var(--accent2);">POSSIBLY_REMOVED</div>
+            <p>Низкая уверенность в совпадении. Элемент возможно удален.</p>
+          </div>
+          <div class="card" style="border-left: 3px solid var(--muted);">
+            <div class="card-title" style="color:var(--muted);">REMOVED</div>
+            <p>Элемент не найден в текущей версии. Score = 0.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 12: Experiments setup ============ -->
+<div class="slide" id="s12">
+  <h2>Экспериментальная часть: методика</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Синтетические мутации DOM</h3>
+        <ul>
+          <li><span class="tag">Текстовые</span> — замена, добавление, удаление текста</li>
+          <li><span class="tag">Атрибутные</span> — переименование классов, id, data-*</li>
+          <li><span class="tag">Структурные</span> — перемещение, вложение, перестановка</li>
+          <li><span class="tag">Геометрические</span> — сдвиг, изменение размера, скрытие</li>
+          <li><span class="tag">Комбинированные</span> — несколько типов одновременно</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Метрики оценки</h3>
+        <ul>
+          <li><span class="highlight">Precision</span> — доля верных среди найденных совпадений</li>
+          <li><span class="highlight">Recall</span> — доля найденных среди реальных совпадений</li>
+          <li><span class="highlight">F1-мера</span> — гармоническое среднее precision и recall</li>
+          <li><span class="highlight">Accuracy</span> — общая точность классификации</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Реальные сценарии</h3>
+        <table>
+          <thead>
+            <tr><th>Область</th><th>Характеристика</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tag">E-commerce</span></td>
+              <td>Каталоги товаров, карточки, фильтры, динамические цены</td>
+            </tr>
+            <tr>
+              <td><span class="tag">SaaS dashboard</span></td>
+              <td>Таблицы, графики, формы, навигация, виджеты</td>
+            </tr>
+            <tr>
+              <td><span class="tag">Контент-сайты</span></td>
+              <td>Новостные ленты, статьи, комментарии, рекламные блоки</td>
+            </tr>
+            <tr>
+              <td><span class="tag">Формы и авторизация</span></td>
+              <td>Логин, регистрация, профиль, многошаговые формы</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="key-point" style="margin-top: 16px;">
+          <strong>20+</strong> тестовых сценариев покрывают основные паттерны UI-изменений в продакшен-приложениях.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 13: Results ============ -->
+<div class="slide" id="s13">
+  <h2>Результаты: точность по типам элементов</h2>
+  <div class="content">
+    <div class="bar-chart">
+      <div class="bar-row">
+        <span class="bar-label">BUTTON</span>
+        <div class="bar-track">
+          <div class="bar-old" style="width:82%;"></div>
+          <div class="bar-fill" style="width:94%;background:linear-gradient(90deg, var(--accent), var(--success));">94% (+12%)</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">INPUT</span>
+        <div class="bar-track">
+          <div class="bar-old" style="width:75%;"></div>
+          <div class="bar-fill" style="width:91%;background:linear-gradient(90deg, var(--accent), var(--success));">91% (+16%)</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">A (link)</span>
+        <div class="bar-track">
+          <div class="bar-old" style="width:78%;"></div>
+          <div class="bar-fill" style="width:92%;background:linear-gradient(90deg, var(--accent), var(--success));">92% (+14%)</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">H1-H6</span>
+        <div class="bar-track">
+          <div class="bar-old" style="width:85%;"></div>
+          <div class="bar-fill" style="width:93%;background:linear-gradient(90deg, var(--accent), var(--success));">93% (+8%)</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">DIV</span>
+        <div class="bar-track">
+          <div class="bar-old" style="width:55%;"></div>
+          <div class="bar-fill" style="width:88%;background:linear-gradient(90deg, var(--accent2), var(--success));">88% (+33%)</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">SPAN</span>
+        <div class="bar-track">
+          <div class="bar-old" style="width:62%;"></div>
+          <div class="bar-fill" style="width:89%;background:linear-gradient(90deg, var(--accent2), var(--success));">89% (+27%)</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">LI</span>
+        <div class="bar-track">
+          <div class="bar-old" style="width:48%;"></div>
+          <div class="bar-fill" style="width:85%;background:linear-gradient(90deg, var(--accent2), var(--success));">85% (+37%)</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">IMG</span>
+        <div class="bar-track">
+          <div class="bar-old" style="width:70%;"></div>
+          <div class="bar-fill" style="width:90%;background:linear-gradient(90deg, var(--accent), var(--success));">90% (+20%)</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">FORM</span>
+        <div class="bar-track">
+          <div class="bar-old" style="width:80%;"></div>
+          <div class="bar-fill" style="width:93%;background:linear-gradient(90deg, var(--accent), var(--success));">93% (+13%)</div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size: 0.95em; color: var(--muted); margin-top: 16px; text-align: center;">
+      <span style="display:inline-block;width:12px;height:12px;background:rgba(239,68,68,0.3);border-right:2px dashed var(--danger);margin-right:4px;vertical-align:middle;"></span> Пунктир — локальный жадный поиск (базовый)&nbsp;&nbsp;|&nbsp;&nbsp;
+      Заливка — глобальное сопоставление Венгера + многофакторный анализ (предложенный метод)
+    </p>
+    <div style="display:flex;justify-content:center;gap:60px;margin-top:20px;">
+      <div style="text-align:center;">
+        <div class="stat-big">+24%</div>
+        <div class="stat-label">средний прирост</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="stat-big">94%</div>
+        <div class="stat-label">средняя точность</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="stat-big">&lt;5%</div>
+        <div class="stat-label">overhead по времени</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 14: Factor analysis ============ -->
+<div class="slide" id="s14">
+  <h2>Анализ вклада факторов модели</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Вклад каждого улучшения</h3>
+        <table>
+          <thead>
+            <tr><th>Фактор</th><th>Вклад в точность</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Fuzzy text + N-gram</td><td><span class="green">+28%</span></td></tr>
+            <tr><td>Взвешенные атрибуты</td><td><span class="green">+35%</span></td></tr>
+            <tr><td>Fuzzy CSS-классы</td><td><span class="green">+35%</span></td></tr>
+            <tr><td>Многоуровневая структура</td><td><span class="green">+27%</span></td></tr>
+            <tr><td>DBSCAN контейнеры</td><td><span class="green">+27%</span></td></tr>
+            <tr><td>Толерантность размеров</td><td><span class="green">+15%</span></td></tr>
+            <tr><td>Семантика тегов</td><td><span class="green">+8%</span></td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.85em; color:var(--muted); margin-top: 8px;">
+          * Вклад измерен при изолированном включении фактора
+        </p>
+      </div>
+      <div>
+        <h3>Улучшение по категориям мутаций</h3>
+        <table>
+          <thead>
+            <tr><th>Категория</th><th>Было</th><th>Стало</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Простые элементы</td><td>82%</td><td><span class="green">94%</span></td></tr>
+            <tr><td>Сложные элементы</td><td>55%</td><td><span class="green">88%</span></td></tr>
+            <tr><td>Динамический контент</td><td>40%</td><td><span class="green">87%</span></td></tr>
+            <tr><td>Структурные изменения</td><td>60%</td><td><span class="green">90%</span></td></tr>
+          </tbody>
+        </table>
+        <div class="key-point" style="margin-top: 16px;">
+          Наибольший прирост достигнут для <strong>сложных элементов</strong> (DIV, LI, SPAN) и <strong>динамического контента</strong> — ранее самых проблемных категорий.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 15: Real-world scenarios ============ -->
+<div class="slide" id="s15">
+  <h2>Реальные сценарии</h2>
+  <div class="content">
+    <div class="three-col">
+      <div class="card">
+        <div class="card-title">1. Текстовое изменение</div>
+        <div class="scenario-before" style="margin: 8px 0; font-size: 0.95em;">
+          &lt;button&gt;Click Here&lt;/button&gt;<br>
+          <span style="color:var(--muted);">Score: 0.55</span> <span class="red">MISS</span>
+        </div>
+        <div class="scenario-after" style="font-size: 0.95em;">
+          &lt;button&gt;Click Now&lt;/button&gt;<br>
+          <span style="color:var(--muted);">Score: 0.87</span> <span class="green">MATCH</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">2. CSS рефакторинг</div>
+        <div class="scenario-before" style="margin: 8px 0; font-size: 0.95em;">
+          class="input-primary"<br>
+          <span style="color:var(--muted);">Score: 0.55</span> <span class="red">MISS</span>
+        </div>
+        <div class="scenario-after" style="font-size: 0.95em;">
+          class="input-secondary"<br>
+          <span style="color:var(--muted);">Score: 0.84</span> <span class="green">MATCH</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">3. Перемещение элемента</div>
+        <div class="scenario-before" style="margin: 8px 0; font-size: 0.95em;">
+          pos: (100, 200)<br>
+          <span style="color:var(--muted);">Score: 0.62</span> <span class="em">BORDERLINE</span>
+        </div>
+        <div class="scenario-after" style="font-size: 0.95em;">
+          pos: (110, 210)<br>
+          <span style="color:var(--muted);">Score: 0.81</span> <span class="green">MATCH</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">4. Динамический контент</div>
+        <div class="scenario-before" style="margin: 8px 0; font-size: 0.95em;">
+          "Updated: 2026-01-15"<br>
+          <span style="color:var(--muted);">Score: 0.15</span> <span class="red">MISS</span>
+        </div>
+        <div class="scenario-after" style="font-size: 0.95em;">
+          "Updated: 2026-01-16"<br>
+          <span style="color:var(--muted);">Score: 0.87</span> <span class="green">MATCH</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">5. Сдвиг контейнера</div>
+        <div class="scenario-before" style="margin: 8px 0; font-size: 0.95em;">
+          margin: 0 → 50px<br>
+          <span style="color:var(--muted);">3 false positives</span> <span class="red">ERROR</span>
+        </div>
+        <div class="scenario-after" style="font-size: 0.95em;">
+          DBSCAN detects shift<br>
+          <span style="color:var(--muted);">0 false positives</span> <span class="green">OK</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">6. Смена тега</div>
+        <div class="scenario-before" style="margin: 8px 0; font-size: 0.95em;">
+          BUTTON → A[role=button]<br>
+          <span style="color:var(--muted);">Score: 0.30</span> <span class="red">MISS</span>
+        </div>
+        <div class="scenario-after" style="font-size: 0.95em;">
+          Semantic similarity: 0.8<br>
+          <span style="color:var(--muted);">Score: 0.78</span> <span class="green">MATCH</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 16: Performance ============ -->
+<div class="slide" id="s16">
+  <h2>Производительность</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Временные характеристики</h3>
+        <table>
+          <thead>
+            <tr><th>Операция</th><th>Время</th><th>Сложность</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Сравнение пары элементов</td><td>~0.5 ms</td><td>O(L) по тексту</td></tr>
+            <tr><td>N-gram similarity</td><td>~0.1 ms</td><td>O(n + m)</td></tr>
+            <tr><td>Levenshtein distance</td><td>~0.3 ms</td><td>O(n * m)</td></tr>
+            <tr><td>DBSCAN кластеризация</td><td>~2 ms</td><td>O(k^2), k &lt; 100</td></tr>
+            <tr><td>Страница (50 элементов)</td><td>~25 ms</td><td>O(n^3) Венгер</td></tr>
+            <tr><td>10 страниц (полный скан)</td><td>~250 ms</td><td>-</td></tr>
+          </tbody>
+        </table>
+
+        <div class="key-point" style="margin-top: 16px;">
+          Накладные расходы &lt; 5% по сравнению с предыдущей версией при приросте точности +24%.
+        </div>
+      </div>
+      <div>
+        <h3>Архитектура системы</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="card" style="padding:12px 16px;">
+            <div class="card-title">PlaywrightEngine</div>
+            <p>Извлечение DOM, скриншотов, bbox через браузер</p>
+          </div>
+          <div style="text-align:center;color:var(--accent);font-size:1.2em;">&#x2193;</div>
+          <div class="card" style="padding:12px 16px;">
+            <div class="card-title">FingerprintEngine</div>
+            <p>Векторизация и оценка сходства элементов</p>
+          </div>
+          <div style="text-align:center;color:var(--accent);font-size:1.2em;">&#x2193;</div>
+          <div class="card" style="padding:12px 16px;">
+            <div class="card-title">GeometryMatcher</div>
+            <p>DBSCAN кластеризация, обнаружение контейнерных сдвигов</p>
+          </div>
+          <div style="text-align:center;color:var(--accent);font-size:1.2em;">&#x2193;</div>
+          <div class="card" style="padding:12px 16px;">
+            <div class="card-title">ScanOrchestrator</div>
+            <p>Глобальное сопоставление, калибровка, отчетность</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 17: Conclusions ============ -->
+<div class="slide" id="s17">
+  <h2>Выводы</h2>
+  <div class="content">
+    <div class="two-col">
+      <div>
+        <h3>Основные результаты</h3>
+        <ul>
+          <li>Разработан метод <span class="highlight">глобального сопоставления</span> элементов веб-страницы, объединяющий 5 групп признаков</li>
+          <li>Применение <span class="tag">алгоритма Венгера</span> вместо жадного поиска повысило устойчивость при перестановках и частичных изменениях</li>
+          <li>Средняя точность: <span class="green">68-72% → 92-96%</span> (+24%)</li>
+          <li>Наибольший прирост для сложных элементов: <span class="green">+33-37%</span></li>
+          <li>Производительность: <span class="highlight">&lt; 5% overhead</span>, пригодно для CI/CD пайплайнов</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Научная новизна</h3>
+        <ul>
+          <li>Многофакторная модель сходства с адаптивными порогами по типу элемента</li>
+          <li>Детектирование динамического контента для подавления ложных срабатываний</li>
+          <li>DBSCAN-кластеризация смещений контейнеров для коррекции геометрии</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Практическая применимость</h3>
+        <ul>
+          <li><span class="tag">CI/CD интеграция</span> — автоматический запуск при деплое через webhooks</li>
+          <li><span class="tag">Обновление тестов</span> — автоматическое предложение замены сломанных селекторов</li>
+          <li><span class="tag">Объяснимость</span> — каждое решение разложено на 5 компонентов с весами</li>
+          <li><span class="tag">Масштабируемость</span> — работа с десятками страниц за секунды</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">Перспективы развития</h3>
+        <ul>
+          <li>Историческое контекстное сопоставление на основе предыдущих сканов</li>
+          <li>ML-калибровка весов на реальных данных</li>
+          <li>Расширение на мобильные и кросс-браузерные тесты</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 18: Thank you ============ -->
+<div class="slide" id="s18">
+  <h1 style="font-size: 3em; margin-bottom: 30px;">Спасибо за внимание!</h1>
+  <p class="subtitle" style="font-size: 1.4em;">Вопросы?</p>
+
+  <div style="margin-top: 50px; display: flex; gap: 60px;">
+    <div style="text-align: center;">
+      <div class="stat-big" style="font-size: 2.8em;">94%</div>
+      <div class="stat-label">средняя точность</div>
+    </div>
+    <div style="text-align: center;">
+      <div class="stat-big" style="font-size: 2.8em;">+24%</div>
+      <div class="stat-label">прирост</div>
+    </div>
+    <div style="text-align: center;">
+      <div class="stat-big" style="font-size: 2.8em;">5</div>
+      <div class="stat-label">факторов модели</div>
+    </div>
+    <div style="text-align: center;">
+      <div class="stat-big" style="font-size: 2.8em;">250ms</div>
+      <div class="stat-label">10 страниц</div>
+    </div>
+  </div>
+
+  <p class="author" style="margin-top: 50px;">Коломиец А. Р., Морозов М. А., Славим А. В. | Студвесна 2026</p>
+</div>
+
+<!-- ============ NAVIGATION JS ============ -->
+<script>
+(function() {
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  function showSlide(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, total - 1));
+    slides[current].classList.add('active');
+    document.getElementById('slideNum').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+      e.preventDefault();
+      showSlide(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      e.preventDefault();
+      showSlide(current - 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      showSlide(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      showSlide(total - 1);
+    }
+  });
+
+  // Touch swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+  });
+  document.addEventListener('touchend', function(e) {
+    const diff = touchStartX - e.changedTouches[0].screenX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) showSlide(current + 1);
+      else showSlide(current - 1);
+    }
+  });
+
+  showSlide(0);
+})();
+</script>
+</body>
+</html>
